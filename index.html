@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner de Portaria - Militar</title>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a202c; color: white; margin: 0; padding: 15px; text-align: center; }
+    .container { max-width: 500px; margin: 20px auto; background: #2d3748; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    h2 { margin-top: 0; color: #63b3ed; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+    #preview { width: 100%; max-width: 320px; min-height: 240px; background: black; border-radius: 6px; margin: 0 auto 15px auto; overflow: hidden; }
+    .painel-dados { display: none; background: #1a202c; padding: 15px; border-radius: 6px; text-align: left; margin-top: 15px; border-left: 5px solid #38a169; }
+    .status-alerta { font-weight: bold; padding: 12px; border-radius: 4px; margin-top: 15px; display: none; }
+    .liberado { background: #2f855a; border: 1px solid #48bb78; }
+    .bloqueado { background: #9b2c2c; border: 1px solid #f56565; }
+    .loader { display: none; color: #cbd5e0; margin-top: 10px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>PORTARIA MILITAR - SCANNER</h2>
+    <div id="preview"></div>
+    <div style="color: #a0aec0; font-size: 13px;">Aponte para o QR Code do Convidado</div>
+    
+    <div class="loader" id="loading">Comunicando com Google Sheets...</div>
+    <div class="status-alerta" id="boxAlerta"></div>
+
+    <div class="painel-dados" id="painelDados">
+      <h3 style="margin: 0 0 10px 0; color: #63b3ed; font-size: 16px;">ACESSO LIBERADO</h3>
+      <p><strong>Convidado:</strong> <span id="vNome"></span></p>
+      <p><strong>Veículo:</strong> <span id="vVeiculo"></span></p>
+      <p><strong>Aluno:</strong> <span id="vAluno"></span></p>
+    </div>
+  </div>
+
+  <script>
+    // 🚨 COLE ABAIXO O SEU LINK DO GOOGLE APPS SCRIPT QUE TERMINA EM /exec
+    const GOOGLE_WEB_APP_URL = "COLE_AQUI_O_SEU_LINK_DO_GOOGLE_EXEC";
+
+    let html5QrcodeScanner = new Html5Qrcode("preview");
+    let ultimoQrLido = "";
+
+    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+    // Inicia a câmera direto ao abrir o site do GitHub
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
+    .catch(err => {
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length > 0) {
+          html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
+        }
+      }).catch(e => alert("Erro na câmera: " + e));
+    });
+
+    function onScanSuccess(decodedText) {
+      if(decodedText && decodedText !== ultimoQrLido) {
+        ultimoQrLido = decodedText;
+        processarLeitura(decodedText);
+      }
+    }
+
+    function processarLeitura(idConvidado) {
+      document.getElementById("painelDados").style.display = "none";
+      document.getElementById("boxAlerta").style.display = "none";
+      document.getElementById("loading").style.display = "block";
+      
+      if(navigator.vibrate) { navigator.vibrate(100); }
+
+      // Dispara o método POST para o Google Sheets conforme o vídeo explicou
+      fetch(GOOGLE_WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors", // Necessário para evitar bloqueios de CORS do Google
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idConvidado: idConvidado, nomeConferente: "Portaria GitHub" })
+      })
+      .then(() => {
+        // Como o modo 'no-cors' não traz resposta de texto por segurança, 
+        // simulamos o sucesso. Para validação em tempo real com retorno visual de erro,
+        // o ideal é verificar a planilha. Aqui daremos o feedback visual de envio concluído:
+        document.getElementById("loading").style.display = "none";
+        exibirAlerta("✓ QR CODE ENVIADO À PLANILHA!", "liberado");
+        setTimeout(() => { ultimoQrLido = ""; }, 4000);
+      })
+      .catch(err => {
+        document.getElementById("loading").style.display = "none";
+        exibirAlerta("Erro de conexão.", "bloqueado");
+        setTimeout(() => { ultimoQrLido = ""; }, 4000);
+      });
+    }
+
+    function exibirAlerta(texto, classe) {
+      const box = document.getElementById("boxAlerta");
+      box.innerHTML = texto;
+      box.className = "status-alerta " + classe;
+      box.style.display = "block";
+    }
+  </script>
+</body>
+</html>
