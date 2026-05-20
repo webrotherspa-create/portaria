@@ -1,100 +1,593 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner de Portaria - Militar</title>
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Scanner de Portaria Militar</title>
+
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a202c; color: white; margin: 0; padding: 15px; text-align: center; }
-    .container { max-width: 500px; margin: 20px auto; background: #2d3748; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-    h2 { margin-top: 0; color: #63b3ed; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
-    #preview { width: 100%; max-width: 320px; min-height: 240px; background: black; border-radius: 6px; margin: 0 auto 15px auto; overflow: hidden; }
-    .status-alerta { font-weight: bold; padding: 12px; border-radius: 4px; margin-top: 15px; display: none; font-size: 16px; }
-    .liberado { background: #2f855a; border: 1px solid #48bb78; color: white; }
-    .bloqueado { background: #9b2c2c; border: 1px solid #f56565; color: white; }
-    .loader { display: none; color: #cbd5e0; margin-top: 10px; font-style: italic; }
+
+    body {
+
+      font-family: 'Segoe UI', Arial, sans-serif;
+
+      background: #1a202c;
+
+      color: white;
+
+      margin: 0;
+
+      padding: 15px;
+
+      text-align: center;
+    }
+
+    .container {
+
+      max-width: 500px;
+
+      margin: 20px auto;
+
+      background: #2d3748;
+
+      padding: 20px;
+
+      border-radius: 10px;
+
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+
+      margin-top: 0;
+
+      color: #63b3ed;
+
+      border-bottom: 1px solid #4a5568;
+
+      padding-bottom: 10px;
+    }
+
+    #preview {
+
+      width: 100%;
+
+      max-width: 320px;
+
+      min-height: 240px;
+
+      background: black;
+
+      border-radius: 8px;
+
+      margin: 0 auto 15px auto;
+
+      overflow: hidden;
+
+      border: 3px solid #63b3ed;
+    }
+
+    .status-alerta {
+
+      font-weight: bold;
+
+      padding: 12px;
+
+      border-radius: 6px;
+
+      margin-top: 15px;
+
+      display: none;
+
+      font-size: 16px;
+    }
+
+    .liberado {
+
+      background: #2f855a;
+
+      border: 1px solid #48bb78;
+
+      color: white;
+    }
+
+    .bloqueado {
+
+      background: #9b2c2c;
+
+      border: 1px solid #f56565;
+
+      color: white;
+    }
+
+    .alerta {
+
+      background: #975a16;
+
+      border: 1px solid #ecc94b;
+
+      color: white;
+    }
+
+    .loader {
+
+      display: none;
+
+      color: #cbd5e0;
+
+      margin-top: 10px;
+
+      font-style: italic;
+    }
+
+    .dados-box {
+
+      display: none;
+
+      background: #1f2937;
+
+      margin-top: 15px;
+
+      padding: 18px;
+
+      border-radius: 8px;
+
+      text-align: left;
+
+      border: 1px solid #4a5568;
+    }
+
+    .dados-box p {
+
+      margin: 10px 0;
+
+      line-height: 1.4;
+    }
+
+    .dados-box strong {
+
+      color: #90cdf4;
+    }
+
+    #btnLiberar {
+
+      width: 100%;
+
+      background: #2f855a;
+
+      color: white;
+
+      border: none;
+
+      padding: 14px;
+
+      border-radius: 6px;
+
+      font-size: 18px;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+      margin-top: 15px;
+    }
+
+    #btnLiberar:hover {
+
+      background: #276749;
+    }
+
+    #btnLiberar:disabled {
+
+      background: #718096;
+
+      cursor: not-allowed;
+    }
+
   </style>
+
 </head>
+
 <body>
 
   <div class="container">
-    <h2>PORTARIA MILITAR - SCANNER</h2>
+
+    <h2>PORTARIA MILITAR</h2>
+
     <div id="preview"></div>
-    <div style="color: #a0aec0; font-size: 13px;">Aponte para o QR Code do Convidado</div>
-    
-    <div class="loader" id="loading">Verificando credenciais no Google Sheets...</div>
-    <div class="status-alerta" id="boxAlerta"></div>
+
+    <div style="color:#a0aec0; font-size:13px;">
+      Aponte para o QR Code do Convidado
+    </div>
+
+    <div
+      class="loader"
+      id="loading"
+    >
+      Verificando credenciais...
+    </div>
+
+    <div
+      class="status-alerta"
+      id="boxAlerta"
+    ></div>
+
+    <!-- DADOS DO CONVIDADO -->
+
+    <div
+      class="dados-box"
+      id="dadosConvidado"
+    >
+
+      <p>
+        <strong>CONVIDADO:</strong><br>
+        <span id="dNome"></span>
+      </p>
+
+      <p>
+        <strong>VEÍCULO:</strong><br>
+        <span id="dVeiculo"></span>
+      </p>
+
+      <p>
+        <strong>FORMANDO RESPONSÁVEL:</strong><br>
+        <span id="dAluno"></span>
+      </p>
+
+      <p>
+        <strong>STATUS:</strong><br>
+        <span id="dStatus"></span>
+      </p>
+
+      <button id="btnLiberar">
+        LIBERAR ACESSO
+      </button>
+
+    </div>
+
   </div>
 
   <script>
-    // Link oficial da sua implantação corrigido e unificado
-    const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
 
-    let html5QrcodeScanner = new Html5Qrcode("preview");
+    // URL DO APPS SCRIPT
+
+    const GOOGLE_WEB_APP_URL =
+      "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
+
+    // ÁUDIOS
+
+    const audioOk = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+
+    const audioErro = new Audio(
+      "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+    );
+
+    // SCANNER
+
+    let html5QrcodeScanner =
+      new Html5Qrcode("preview");
+
     let ultimoQrLido = "";
 
-    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+    const config = {
 
-    // Inicialização automática da câmera integrada
-    html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
-    .catch(err => {
-      Html5Qrcode.getCameras().then(cameras => {
-        if (cameras && cameras.length > 0) {
-          html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
+      fps: 5,
+
+      qrbox: {
+        width: 220,
+        height: 220
+      }
+    };
+
+    // INICIAR CÂMERA
+
+    iniciarCamera();
+
+    async function iniciarCamera() {
+
+      try {
+
+        await html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          config,
+          onScanSuccess
+        );
+
+      } catch(err) {
+
+        try {
+
+          const cameras =
+            await Html5Qrcode.getCameras();
+
+          if (cameras.length > 0) {
+
+            await html5QrcodeScanner.start(
+              cameras[cameras.length - 1].id,
+              config,
+              onScanSuccess
+            );
+          }
+
+        } catch(e) {
+
+          alert(
+            "Erro ao acessar câmera."
+          );
         }
-      }).catch(e => alert("Erro ao acessar hardware de vídeo: " + e));
-    });
+      }
+    }
+
+    // QR LIDO
 
     function onScanSuccess(decodedText) {
-      if(decodedText && decodedText !== ultimoQrLido) {
+
+      if (
+        decodedText &&
+        decodedText !== ultimoQrLido
+      ) {
+
         ultimoQrLido = decodedText;
+
         processarLeitura(decodedText);
       }
     }
 
-    function processarLeitura(idConvidado) {
-      document.getElementById("boxAlerta").style.display = "none";
-      document.getElementById("loading").style.display = "block";
-      
-      if(navigator.vibrate) { navigator.vibrate(100); }
+    // CONSULTA QR
 
-      // Envia os dados como Form URL Encoded para permitir resposta em tempo real sem bloqueio de segurança
+    function processarLeitura(idConvidado) {
+
+      html5QrcodeScanner.pause(true);
+
+      document
+        .getElementById("boxAlerta")
+        .style.display = "none";
+
+      document
+        .getElementById("dadosConvidado")
+        .style.display = "none";
+
+      document
+        .getElementById("loading")
+        .style.display = "block";
+
+      if (navigator.vibrate) {
+
+        navigator.vibrate(100);
+      }
+
       fetch(GOOGLE_WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ "idConvidado": idConvidado })
+
+        method:"POST",
+
+        body:new URLSearchParams({
+
+          acao:"consultar",
+
+          idConvidado:idConvidado
+        })
       })
-      .then(response => response.text())
-      .then(textoResposta => {
-        document.getElementById("loading").style.display = "none";
-        
-        // Verifica a mensagem devolvida pelo seu Código.gs
-        if (textoResposta.includes("✓ LIBERADO")) {
-          exibirAlerta(textoResposta, "liberado");
-        } else {
-          exibirAlerta(textoResposta, "bloqueado"); // Trata avisos de "Já lido" ou "Inválido"
+
+      .then(r => r.json())
+
+      .then(res => {
+
+        document
+          .getElementById("loading")
+          .style.display = "none";
+
+        // QR INVÁLIDO
+
+        if (!res.sucesso) {
+
+          audioErro.play();
+
+          exibirAlerta(
+            res.msg,
+            "bloqueado"
+          );
+
+          liberarScanner();
+
+          return;
         }
-        
-        // Mantém a resposta na tela por 5 segundos antes de liberar o scanner para o próximo QR Code
-        setTimeout(() => { 
-          ultimoQrLido = ""; 
-          document.getElementById("boxAlerta").style.display = "none";
-        }, 5000);
+
+        // MOSTRA DADOS
+
+        document
+          .getElementById("dadosConvidado")
+          .style.display = "block";
+
+        document
+          .getElementById("dNome")
+          .innerText = res.nome;
+
+        document
+          .getElementById("dVeiculo")
+          .innerText = res.veiculo;
+
+        document
+          .getElementById("dAluno")
+          .innerText = res.aluno;
+
+        document
+          .getElementById("dStatus")
+          .innerText = res.status;
+
+        const btn =
+          document.getElementById("btnLiberar");
+
+        // JÁ ENTROU
+
+        if (
+          res.status !== "NÃO ENTROU"
+        ) {
+
+          audioErro.play();
+
+          btn.style.display = "none";
+
+          exibirAlerta(
+            "⚠️ CONVIDADO JÁ ENTROU",
+            "alerta"
+          );
+
+          liberarScanner();
+
+          return;
+        }
+
+        // APTO
+
+        audioOk.play();
+
+        btn.style.display = "block";
+
+        exibirAlerta(
+          "✓ APTO PARA ENTRADA",
+          "liberado"
+        );
+
+        // BOTÃO LIBERAR
+
+        btn.onclick = function() {
+
+          btn.disabled = true;
+
+          btn.innerText = "LIBERANDO...";
+
+          fetch(GOOGLE_WEB_APP_URL, {
+
+            method:"POST",
+
+            body:new URLSearchParams({
+
+              acao:"liberar",
+
+              idConvidado:idConvidado
+            })
+          })
+
+          .then(r => r.json())
+
+          .then(retorno => {
+
+            if (retorno.sucesso) {
+
+              audioOk.play();
+
+              exibirAlerta(
+                "✓ ACESSO LIBERADO",
+                "liberado"
+              );
+
+            } else {
+
+              audioErro.play();
+
+              exibirAlerta(
+                retorno.msg,
+                "bloqueado"
+              );
+            }
+
+            setTimeout(() => {
+
+              btn.disabled = false;
+
+              btn.innerText =
+                "LIBERAR ACESSO";
+
+              document
+                .getElementById("dadosConvidado")
+                .style.display = "none";
+
+              html5QrcodeScanner.resume();
+
+              ultimoQrLido = "";
+
+            }, 4000);
+
+          })
+
+          .catch(() => {
+
+            audioErro.play();
+
+            exibirAlerta(
+              "Erro de comunicação.",
+              "bloqueado"
+            );
+
+            liberarScanner();
+          });
+        };
       })
-      .catch(err => {
-        document.getElementById("loading").style.display = "none";
-        exibirAlerta("Erro de comunicação com o servidor de dados.", "bloqueado");
-        setTimeout(() => { ultimoQrLido = ""; }, 5000);
+
+      .catch(() => {
+
+        document
+          .getElementById("loading")
+          .style.display = "none";
+
+        audioErro.play();
+
+        exibirAlerta(
+          "Erro de comunicação com servidor.",
+          "bloqueado"
+        );
+
+        liberarScanner();
       });
     }
 
+    // ALERTA
+
     function exibirAlerta(texto, classe) {
-      const box = document.getElementById("boxAlerta");
+
+      const box =
+        document.getElementById("boxAlerta");
+
       box.innerHTML = texto;
-      box.className = "status-alerta " + classe;
+
+      box.className =
+        "status-alerta " + classe;
+
       box.style.display = "block";
     }
+
+    // LIBERA NOVA LEITURA
+
+    function liberarScanner() {
+
+      setTimeout(() => {
+
+        document
+          .getElementById("dadosConvidado")
+          .style.display = "none";
+
+        document
+          .getElementById("boxAlerta")
+          .style.display = "none";
+
+        html5QrcodeScanner.resume();
+
+        ultimoQrLido = "";
+
+      }, 4000);
+    }
+
   </script>
+
 </body>
 </html>
