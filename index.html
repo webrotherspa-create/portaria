@@ -1,274 +1,441 @@
-me mande completo
-
-
-
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
   <meta charset="UTF-8">
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Scanner de Portaria Militar</title>
-
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
   <style>
+    * {
+      box-sizing: border-box;
+    }
 
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a202c; color: white; margin: 0; padding: 15px; text-align: center; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a202c;
+      color: white;
+      margin: 0;
+      padding: 15px;
+      text-align: center;
+    }
 
-    .container { max-width: 500px; margin: 20px auto; background: #2d3748; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .container {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #2d3748;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
 
-    h2 { margin-top: 0; color: #63b3ed; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+    h2 {
+      margin-top: 0;
+      color: #63b3ed;
+      border-bottom: 1px solid #4a5568;
+      padding-bottom: 10px;
+    }
 
-    #preview { width: 100%; max-width: 320px; min-height: 240px; background: black; border-radius: 8px; margin: 0 auto 15px auto; overflow: hidden; border: 3px solid #63b3ed; }
+    #preview {
+      width: 100%;
+      max-width: 320px;
+      min-height: 240px;
+      background: black;
+      border-radius: 8px;
+      margin: 0 auto 15px auto;
+      overflow: hidden;
+      border: 3px solid #63b3ed;
+    }
 
-    .status-alerta { font-weight: bold; padding: 12px; border-radius: 6px; margin-top: 15px; display: none; font-size: 16px; }
+    .status-alerta {
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 15px;
+      display: none;
+      font-size: 16px;
+    }
 
-    .liberado { background: #2f855a; border: 1px solid #48bb78; color: white; }
+    .liberado {
+      background: #2f855a;
+      border: 1px solid #48bb78;
+      color: white;
+    }
 
-    .bloqueado { background: #9b2c2c; border: 1px solid #f56565; color: white; }
+    .bloqueado {
+      background: #9b2c2c;
+      border: 1px solid #f56565;
+      color: white;
+    }
 
-    .alerta { background: #975a16; border: 1px solid #ecc94b; color: white; }
+    .alerta {
+      background: #975a16;
+      border: 1px solid #ecc94b;
+      color: white;
+    }
 
-    .loader { display: none; color: #cbd5e0; margin-top: 10px; font-style: italic; }
+    .loader {
+      display: none;
+      color: #cbd5e0;
+      margin-top: 10px;
+      font-style: italic;
+    }
 
-    .dados-box { display: none; background: #1f2937; margin-top: 15px; padding: 18px; border-radius: 8px; text-align: left; border: 1px solid #4a5568; }
+    .dados-box {
+      display: none;
+      background: #1f2937;
+      margin-top: 15px;
+      padding: 18px;
+      border-radius: 8px;
+      text-align: left;
+      border: 1px solid #4a5568;
+    }
 
-    .dados-box p { margin: 10px 0; line-height: 1.4; }
+    .dados-box p {
+      margin: 10px 0;
+      line-height: 1.4;
+    }
 
-    .dados-box strong { color: #90cdf4; }
+    .dados-box strong {
+      color: #90cdf4;
+    }
 
-    #btnLiberar { width: 100%; background: #2f855a; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    #btnLiberar {
+      width: 100%;
+      background: #2f855a;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
 
-    #btnLiberar:disabled { background: #718096; cursor: not-allowed; }
+    #btnLiberar:disabled {
+      background: #718096;
+      cursor: not-allowed;
+    }
 
     /* Estilo Login */
+    .input-field {
+      width: 90%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #4a5568;
+      background: #1a202c;
+      color: white;
+      font-size: 16px;
+    }
 
-    #loginBox { display: block; }
+    .login-btn {
+      width: 90%;
+      padding: 12px;
+      background: #2f855a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
 
-    .input-field { width: 90%; padding: 12px; margin: 8px 0; border-radius: 5px; border: 1px solid #4a5568; background: #1a202c; color: white; }
+    .login-btn:hover {
+      background: #276749;
+    }
 
+    .msg-erro {
+      margin-top: 15px;
+      color: #f56565;
+      font-size: 14px;
+    }
+
+    /* Pequenos ajustes */
+    .aviso-camera {
+      font-size: 13px;
+      color: #a0aec0;
+      margin-top: 5px;
+    }
   </style>
-
 </head>
-
 <body>
 
-
-
+  <!-- TELA DE LOGIN -->
   <div id="loginBox" class="container">
-
     <h2>AUTENTICAÇÃO</h2>
-
-    <input type="text" id="nip" class="input-field" placeholder="NIP do Conferente">
-
-    <input type="password" id="pin" class="input-field" placeholder="PIN de Acesso">
-
-    <button onclick="fazerLogin()" style="width: 90%; padding: 12px; background: #2f855a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">ENTRAR</button>
-
-    <p id="msgLogin" style="margin-top:15px; color:#f56565;"></p>
-
+    <input type="text" id="nip" class="input-field" placeholder="NIP do Conferente" autocomplete="off">
+    <input type="password" id="pin" class="input-field" placeholder="PIN de Acesso" autocomplete="off">
+    <button class="login-btn" onclick="fazerLogin()">ENTRAR</button>
+    <div id="msgLogin" class="msg-erro"></div>
   </div>
 
-
-
+  <!-- TELA PRINCIPAL (SCANNER) -->
   <div id="appContainer" class="container" style="display: none;">
-
     <h2>PORTARIA MILITAR</h2>
-
     <div id="preview"></div>
-
-    <div style="color:#a0aec0; font-size:13px;">Aponte para o QR Code do Convidado</div>
-
+    <div class="aviso-camera">Aponte para o QR Code do Convidado</div>
     <div class="loader" id="loading">Verificando...</div>
-
     <div class="status-alerta" id="boxAlerta"></div>
 
-
-
     <div class="dados-box" id="dadosConvidado">
-
       <p><strong>CONVIDADO:</strong><br><span id="dNome"></span></p>
-
       <p><strong>VEÍCULO:</strong><br><span id="dVeiculo"></span></p>
-
-      <p><strong>FORMANDO:</strong><br><span id="dAluno"></span></p>
-
-      <p><strong>STATUS:</strong><br><span id="dStatus"></span></p>
-
+      <p><strong>FORMANDO (ALUNO):</strong><br><span id="dAluno"></span></p>
+      <p><strong>STATUS ATUAL:</strong><br><span id="dStatus"></span></p>
       <button id="btnLiberar">LIBERAR ACESSO</button>
-
     </div>
-
   </div>
 
-
-
   <script>
-
+    // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU WEB APP DO GOOGLE APPS SCRIPT
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
 
-    let conferenteLogado = ""; // Variável para registrar o responsável
+    let conferenteLogado = "";      // Nome do conferente que autenticou
+    let html5QrcodeScanner = null;  // Instância do scanner
+    let ultimoQrLido = "";          // Evita leitura repetida do mesmo QR
+    let scannerAtivo = false;       // Controle de estado
 
+    // Sons (opcional - alguns navegadores bloqueiam autoplay, mas funciona após interação)
+    const audioOk = new Audio("https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3");
+    const audioErro = new Audio("https://www.soundjay.com/misc/sounds/failure-ding.mp3");
 
+    // ----- FUNÇÃO DE LOGIN (via fetch para o Google Apps Script) -----
+    async function fazerLogin() {
+      const nip = document.getElementById('nip').value.trim();
+      const pin = document.getElementById('pin').value.trim();
+      const msgDiv = document.getElementById('msgLogin');
 
-    function fazerLogin() {
-
-      const nip = document.getElementById('nip').value;
-
-      const pin = document.getElementById('pin').value;
-
-      
-
-      // Chama a função do seu backend .gs
-
-      google.script.run.withSuccessHandler(res => {
-
-        if (res.sucesso) {
-
-          conferenteLogado = res.nome;
-
-          document.getElementById('loginBox').style.display = 'none';
-
-          document.getElementById('appContainer').style.display = 'block';
-
-          iniciarCamera();
-
-        } else {
-
-          document.getElementById('msgLogin').innerText = "NIP ou PIN incorretos!";
-
-        }
-
-      }).verificarLogin(nip, pin);
-
-    }
-
-
-
-    // --- LÓGICA DO SCANNER (Mantida a estrutura anterior) ---
-
-    let html5QrcodeScanner = new Html5Qrcode("preview");
-
-    let ultimoQrLido = "";
-
-    const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-
-    const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-
-
-
-    async function iniciarCamera() {
-
-      try {
-
-        await html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 5, qrbox: { width: 220, height: 220 } }, onScanSuccess);
-
-      } catch(e) { alert("Erro ao acessar câmera."); }
-
-    }
-
-
-
-    function onScanSuccess(decodedText) {
-
-      if (decodedText && decodedText !== ultimoQrLido) {
-
-        ultimoQrLido = decodedText;
-
-        processarLeitura(decodedText);
-
+      if (!nip || !pin) {
+        msgDiv.innerText = "Preencha NIP e PIN!";
+        return;
       }
 
+      msgDiv.innerText = "Autenticando...";
+      msgDiv.style.color = "#cbd5e0";
+
+      try {
+        // Envia requisição para o Web App com ação "login"
+        const response = await fetch(GOOGLE_WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            acao: "login",
+            nip: nip,
+            pin: pin
+          })
+        });
+
+        const resultado = await response.json();
+
+        if (resultado.sucesso === true) {
+          conferenteLogado = resultado.nome || "Conferente";
+          // Oculta login e mostra scanner
+          document.getElementById('loginBox').style.display = 'none';
+          document.getElementById('appContainer').style.display = 'block';
+          iniciarCamera();
+        } else {
+          msgDiv.innerText = resultado.msg || "NIP ou PIN inválidos!";
+          msgDiv.style.color = "#f56565";
+        }
+      } catch (erro) {
+        console.error("Erro na autenticação:", erro);
+        msgDiv.innerText = "Erro de rede. Verifique sua conexão ou a URL do Web App.";
+        msgDiv.style.color = "#f56565";
+      }
     }
 
+    // ----- INICIALIZAÇÃO DA CÂMERA E SCANNER -----
+    async function iniciarCamera() {
+      const previewElement = document.getElementById("preview");
+      if (!previewElement) return;
 
+      // Se já existir scanner, para e limpa
+      if (html5QrcodeScanner) {
+        try {
+          await html5QrcodeScanner.stop();
+        } catch (e) { /* ignora */ }
+        html5QrcodeScanner.clear();
+      }
 
-    function processarLeitura(idConvidado) {
+      html5QrcodeScanner = new Html5Qrcode("preview");
+      scannerAtivo = true;
 
-      html5QrcodeScanner.pause(true);
+      try {
+        await html5QrcodeScanner.start(
+          { facingMode: "environment" }, // câmera traseira
+          {
+            fps: 8,
+            qrbox: { width: 260, height: 260 },
+            aspectRatio: 1.0
+          },
+          onScanSuccess,
+          onScanFailure
+        );
+      } catch (err) {
+        console.error("Erro ao iniciar câmera:", err);
+        exibirAlerta("Não foi possível acessar a câmera. Verifique as permissões.", "alerta");
+        scannerAtivo = false;
+      }
+    }
 
-      fetch(GOOGLE_WEB_APP_URL, {
+    // Callback quando um QR Code é lido com sucesso
+    function onScanSuccess(decodedText) {
+      if (!scannerAtivo) return;
+      if (decodedText && decodedText !== ultimoQrLido) {
+        ultimoQrLido = decodedText;
+        processarLeitura(decodedText);
+      }
+    }
 
-        method: "POST",
+    function onScanFailure(error) {
+      // Silencioso, apenas para debug leve
+      // console.log("Falha no scan: ", error);
+    }
 
-        body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
+    // Pausa o scanner temporariamente (evita múltiplas leituras)
+    function pausarScanner() {
+      if (html5QrcodeScanner && scannerAtivo) {
+        html5QrcodeScanner.pause(true);
+        scannerAtivo = false;
+      }
+    }
 
-      })
+    function retomarScanner() {
+      if (html5QrcodeScanner && !scannerAtivo) {
+        html5QrcodeScanner.resume();
+        scannerAtivo = true;
+        ultimoQrLido = ""; // libera para ler novo QR
+      }
+    }
 
-      .then(r => r.json())
+    // ----- CONSULTA O QR CODE VIA WEB APP -----
+    async function processarLeitura(idConvidado) {
+      pausarScanner();
+      const loadingDiv = document.getElementById("loading");
+      const boxAlerta = document.getElementById("boxAlerta");
+      const dadosDiv = document.getElementById("dadosConvidado");
 
-      .then(res => {
+      // Esconde alerta anterior e dados, mostra loading
+      boxAlerta.style.display = "none";
+      dadosDiv.style.display = "none";
+      loadingDiv.style.display = "block";
 
-        if (!res.sucesso) { audioErro.play(); exibirAlerta(res.msg, "bloqueado"); liberarScanner(); return; }
+      try {
+        const response = await fetch(GOOGLE_WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            acao: "consultar",
+            idConvidado: idConvidado
+          })
+        });
 
-        
+        const resultado = await response.json();
+        loadingDiv.style.display = "none";
 
-        document.getElementById("dNome").innerText = res.nome;
+        if (!resultado.sucesso) {
+          // Convidado não encontrado ou QR inválido
+          audioErro.play().catch(e => console.log("Áudio bloqueado"));
+          exibirAlerta(resultado.msg || "QR Code inválido ou convidado não cadastrado.", "bloqueado");
+          agendarRetornoScanner(3000);
+          return;
+        }
 
-        document.getElementById("dVeiculo").innerText = res.veiculo;
+        // Exibe dados do convidado
+        document.getElementById("dNome").innerText = resultado.nome || "---";
+        document.getElementById("dVeiculo").innerText = resultado.veiculo || "Não informado";
+        document.getElementById("dAluno").innerText = resultado.aluno || "---";
+        document.getElementById("dStatus").innerText = resultado.status || "Pendente";
+        dadosDiv.style.display = "block";
 
-        document.getElementById("dAluno").innerText = res.aluno;
+        // Configura botão de liberação (evita múltiplos listeners)
+        const btnLiberar = document.getElementById("btnLiberar");
+        const novoBtn = btnLiberar.cloneNode(true);
+        btnLiberar.parentNode.replaceChild(novoBtn, btnLiberar);
+        novoBtn.id = "btnLiberar";
 
-        document.getElementById("dStatus").innerText = res.status;
+        novoBtn.onclick = async () => {
+          novoBtn.disabled = true;
+          novoBtn.innerText = "LIBERANDO...";
+          try {
+            const liberacaoResp = await fetch(GOOGLE_WEB_APP_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                acao: "liberar",
+                idConvidado: idConvidado,
+                responsavel: conferenteLogado
+              })
+            });
+            const liberado = await liberacaoResp.json();
 
-        document.getElementById("dadosConvidado").style.display = "block";
-
-
-
-        document.getElementById("btnLiberar").onclick = async () => {
-
-          // Aqui você envia o nome do conferente junto com a liberação
-
-          fetch(GOOGLE_WEB_APP_URL, {
-
-            method: "POST",
-
-            body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado, responsavel: conferenteLogado })
-
-          }).then(r => r.json()).then(retorno => {
-
-             exibirAlerta("✓ ACESSO LIBERADO POR " + conferenteLogado, "liberado");
-
-             setTimeout(() => location.reload(), 3000);
-
-          });
-
+            if (liberado.sucesso) {
+              audioOk.play().catch(e => console.log("Áudio bloqueado"));
+              exibirAlerta(`✓ ACESSO LIBERADO por ${conferenteLogado}`, "liberado");
+              // Atualiza status na tela
+              document.getElementById("dStatus").innerText = "LIBERADO";
+              novoBtn.disabled = true;
+              novoBtn.innerText = "ACESSO CONCEDIDO";
+              // Retorna ao scanner após 3 segundos
+              setTimeout(() => {
+                document.getElementById("boxAlerta").style.display = "none";
+                document.getElementById("dadosConvidado").style.display = "none";
+                retomarScanner();
+              }, 3000);
+            } else {
+              audioErro.play().catch(e => console.log("Áudio bloqueado"));
+              exibirAlerta(liberado.msg || "Erro na liberação. Tente novamente.", "alerta");
+              novoBtn.disabled = false;
+              novoBtn.innerText = "LIBERAR ACESSO";
+              // Não retoma scanner automaticamente, usuário pode clicar em "Tentar novamente" ou o sistema aguarda
+              agendarRetornoScanner(4000);
+            }
+          } catch (err) {
+            console.error("Erro na liberação:", err);
+            exibirAlerta("Falha na comunicação. Verifique rede.", "alerta");
+            novoBtn.disabled = false;
+            novoBtn.innerText = "LIBERAR ACESSO";
+            agendarRetornoScanner(4000);
+          }
         };
-
-      });
-
+      } catch (error) {
+        console.error("Erro na consulta:", error);
+        loadingDiv.style.display = "none";
+        exibirAlerta("Erro de conexão com o servidor. Verifique sua internet.", "alerta");
+        agendarRetornoScanner(4000);
+      }
     }
 
-
-
+    // Função para exibir alertas temporários
     function exibirAlerta(texto, classe) {
-
       const box = document.getElementById("boxAlerta");
-
       box.innerHTML = texto;
-
-      box.className = "status-alerta " + classe;
-
+      box.className = `status-alerta ${classe}`;
       box.style.display = "block";
-
     }
 
-
-
-    function liberarScanner() {
-
-      setTimeout(() => { html5QrcodeScanner.resume(); ultimoQrLido = ""; }, 3000);
-
+    // Agenda o retorno do scanner após X ms
+    function agendarRetornoScanner(tempoMs) {
+      setTimeout(() => {
+        // Limpa a tela de dados e esconde alerta se ainda estiver visível
+        const dadosDiv = document.getElementById("dadosConvidado");
+        const alertaDiv = document.getElementById("boxAlerta");
+        if (dadosDiv) dadosDiv.style.display = "none";
+        if (alertaDiv) alertaDiv.style.display = "none";
+        retomarScanner();
+      }, tempoMs);
     }
 
+    // Limpeza ao sair da página (opcional)
+    window.addEventListener("beforeunload", async () => {
+      if (html5QrcodeScanner && scannerAtivo) {
+        try {
+          await html5QrcodeScanner.stop();
+        } catch (e) {}
+      }
+    });
   </script>
-
 </body>
-
-</html> 
-
+</html>
