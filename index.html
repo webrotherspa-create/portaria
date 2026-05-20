@@ -19,6 +19,7 @@
     .dados-box p { margin: 10px 0; line-height: 1.4; }
     .dados-box strong { color: #90cdf4; }
     #btnLiberar { width: 100%; background: #2f855a; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    #btnLiberar:hover { background: #276749; }
     #btnLiberar:disabled { background: #718096; cursor: not-allowed; }
   </style>
 </head>
@@ -41,14 +42,15 @@
 
   <script>
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
-    
-    // Sons invertidos: Bip para OK, Clang para Erro
-    const audioOk = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    const audioErro = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+
+    const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+    const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
     let html5QrcodeScanner = new Html5Qrcode("preview");
     let ultimoQrLido = "";
     const config = { fps: 5, qrbox: { width: 220, height: 220 } };
+
+    iniciarCamera();
 
     async function iniciarCamera() {
       try {
@@ -56,7 +58,9 @@
       } catch(err) {
         try {
           const cameras = await Html5Qrcode.getCameras();
-          if (cameras.length > 0) await html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
+          if (cameras.length > 0) {
+            await html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
+          }
         } catch(e) { alert("Erro ao acessar câmera."); }
       }
     }
@@ -71,6 +75,7 @@
     function processarLeitura(idConvidado) {
       html5QrcodeScanner.pause(true);
       if (navigator.vibrate) navigator.vibrate(200);
+
       document.getElementById("loading").style.display = "block";
       document.getElementById("boxAlerta").style.display = "none";
       document.getElementById("dadosConvidado").style.display = "none";
@@ -82,6 +87,7 @@
       .then(r => r.json())
       .then(res => {
         document.getElementById("loading").style.display = "none";
+
         if (!res.sucesso) {
           audioErro.play();
           exibirAlerta(res.msg, "bloqueado");
@@ -142,7 +148,7 @@
       .catch(() => {
         document.getElementById("loading").style.display = "none";
         audioErro.play();
-        exibirAlerta("Erro de comunicação.", "bloqueado");
+        exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
         liberarScanner();
       });
     }
@@ -160,10 +166,8 @@
         document.getElementById("boxAlerta").style.display = "none";
         html5QrcodeScanner.resume();
         ultimoQrLido = "";
-      }, 3000);
+      }, 4000);
     }
-
-    iniciarCamera();
   </script>
 </body>
 </html>
