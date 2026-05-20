@@ -1,108 +1,274 @@
+me mande completo
+
+
+
 <!DOCTYPE html>
+
 <html lang="pt-BR">
+
 <head>
+
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Scanner de Portaria Militar</title>
+
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
   <style>
+
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a202c; color: white; margin: 0; padding: 15px; text-align: center; }
+
     .container { max-width: 500px; margin: 20px auto; background: #2d3748; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
     h2 { margin-top: 0; color: #63b3ed; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+
     #preview { width: 100%; max-width: 320px; min-height: 240px; background: black; border-radius: 8px; margin: 0 auto 15px auto; overflow: hidden; border: 3px solid #63b3ed; }
+
     .status-alerta { font-weight: bold; padding: 12px; border-radius: 6px; margin-top: 15px; display: none; font-size: 16px; }
+
     .liberado { background: #2f855a; border: 1px solid #48bb78; color: white; }
+
     .bloqueado { background: #9b2c2c; border: 1px solid #f56565; color: white; }
+
+    .alerta { background: #975a16; border: 1px solid #ecc94b; color: white; }
+
+    .loader { display: none; color: #cbd5e0; margin-top: 10px; font-style: italic; }
+
     .dados-box { display: none; background: #1f2937; margin-top: 15px; padding: 18px; border-radius: 8px; text-align: left; border: 1px solid #4a5568; }
+
+    .dados-box p { margin: 10px 0; line-height: 1.4; }
+
+    .dados-box strong { color: #90cdf4; }
+
+    #btnLiberar { width: 100%; background: #2f855a; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+
+    #btnLiberar:disabled { background: #718096; cursor: not-allowed; }
+
+    /* Estilo Login */
+
+    #loginBox { display: block; }
+
     .input-field { width: 90%; padding: 12px; margin: 8px 0; border-radius: 5px; border: 1px solid #4a5568; background: #1a202c; color: white; }
+
   </style>
+
 </head>
+
 <body>
 
+
+
   <div id="loginBox" class="container">
+
     <h2>AUTENTICAÇÃO</h2>
-    <input type="text" id="nip" class="input-field" placeholder="00.0000.00" oninput="mascaraNIP(this)" maxlength="10">
+
+    <input type="text" id="nip" class="input-field" placeholder="NIP do Conferente">
+
     <input type="password" id="pin" class="input-field" placeholder="PIN de Acesso">
+
     <button onclick="fazerLogin()" style="width: 90%; padding: 12px; background: #2f855a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">ENTRAR</button>
-    <p id="msgLogin" style="margin-top:15px; color:#f56565; font-weight:bold;"></p>
+
+    <p id="msgLogin" style="margin-top:15px; color:#f56565;"></p>
+
   </div>
+
+
 
   <div id="appContainer" class="container" style="display: none;">
+
     <h2>PORTARIA MILITAR</h2>
+
     <div id="preview"></div>
+
+    <div style="color:#a0aec0; font-size:13px;">Aponte para o QR Code do Convidado</div>
+
     <div class="loader" id="loading">Verificando...</div>
+
     <div class="status-alerta" id="boxAlerta"></div>
+
+
+
     <div class="dados-box" id="dadosConvidado">
+
       <p><strong>CONVIDADO:</strong><br><span id="dNome"></span></p>
+
       <p><strong>VEÍCULO:</strong><br><span id="dVeiculo"></span></p>
+
       <p><strong>FORMANDO:</strong><br><span id="dAluno"></span></p>
+
       <p><strong>STATUS:</strong><br><span id="dStatus"></span></p>
-      <button id="btnLiberar" style="width: 100%; padding: 14px; background: #2f855a; color: white; border: none; border-radius: 6px; cursor: pointer;">LIBERAR ACESSO</button>
+
+      <button id="btnLiberar">LIBERAR ACESSO</button>
+
     </div>
+
   </div>
 
-  <script>
-    const GOOGLE_WEB_APP_URL = "SEU_LINK_DO_WEB_APP_AQUI"; // Substitua pelo seu link final
-    let conferenteLogado = "";
 
-    function mascaraNIP(input) {
-      let v = input.value.replace(/\D/g, '');
-      v = v.replace(/^(\d{2})(\d)/, '$1.$2');
-      v = v.replace(/\.(\d{4})(\d)/, '.$1.$2');
-      input.value = v.substring(0, 10);
-    }
+
+  <script>
+
+    const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
+
+    let conferenteLogado = ""; // Variável para registrar o responsável
+
+
 
     function fazerLogin() {
+
       const nip = document.getElementById('nip').value;
+
       const pin = document.getElementById('pin').value;
-      const msg = document.getElementById('msgLogin');
+
       
-      if (typeof google === 'undefined') {
-        msg.innerText = "Erro: Abra este sistema através do Link do Web App, não como arquivo local.";
-        return;
+
+      // Chama a função do seu backend .gs
+
+      google.script.run.withSuccessHandler(res => {
+
+        if (res.sucesso) {
+
+          conferenteLogado = res.nome;
+
+          document.getElementById('loginBox').style.display = 'none';
+
+          document.getElementById('appContainer').style.display = 'block';
+
+          iniciarCamera();
+
+        } else {
+
+          document.getElementById('msgLogin').innerText = "NIP ou PIN incorretos!";
+
+        }
+
+      }).verificarLogin(nip, pin);
+
+    }
+
+
+
+    // --- LÓGICA DO SCANNER (Mantida a estrutura anterior) ---
+
+    let html5QrcodeScanner = new Html5Qrcode("preview");
+
+    let ultimoQrLido = "";
+
+    const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+
+    const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+
+
+
+    async function iniciarCamera() {
+
+      try {
+
+        await html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 5, qrbox: { width: 220, height: 220 } }, onScanSuccess);
+
+      } catch(e) { alert("Erro ao acessar câmera."); }
+
+    }
+
+
+
+    function onScanSuccess(decodedText) {
+
+      if (decodedText && decodedText !== ultimoQrLido) {
+
+        ultimoQrLido = decodedText;
+
+        processarLeitura(decodedText);
+
       }
 
-      msg.innerText = "Verificando...";
-      google.script.run.withSuccessHandler(res => {
-        if (res.sucesso) {
-          conferenteLogado = res.nome;
-          document.getElementById('loginBox').style.display = 'none';
-          document.getElementById('appContainer').style.display = 'block';
-          iniciarCamera();
-        } else {
-          msg.innerText = "❌ Acesso Negado: NIP ou PIN incorretos.";
-        }
-      }).verificarLogin(nip, pin);
     }
 
-    // --- Lógica do Scanner ---
-    let html5QrcodeScanner = new Html5Qrcode("preview");
-    
-    async function iniciarCamera() {
-      try {
-        await html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 5, qrbox: { width: 220, height: 220 } }, (text) => processarLeitura(text));
-      } catch(e) { alert("Erro ao acessar câmera."); }
-    }
 
-    function processarLeitura(id) {
+
+    function processarLeitura(idConvidado) {
+
       html5QrcodeScanner.pause(true);
-      fetch(GOOGLE_WEB_APP_URL, { method: "POST", body: new URLSearchParams({ acao: "consultar", idConvidado: id }) })
-      .then(r => r.json()).then(res => {
-        if (!res.sucesso) { exibirAlerta(res.msg, "bloqueado"); liberarScanner(); return; }
+
+      fetch(GOOGLE_WEB_APP_URL, {
+
+        method: "POST",
+
+        body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
+
+      })
+
+      .then(r => r.json())
+
+      .then(res => {
+
+        if (!res.sucesso) { audioErro.play(); exibirAlerta(res.msg, "bloqueado"); liberarScanner(); return; }
+
+        
+
         document.getElementById("dNome").innerText = res.nome;
+
         document.getElementById("dVeiculo").innerText = res.veiculo;
+
         document.getElementById("dAluno").innerText = res.aluno;
+
         document.getElementById("dStatus").innerText = res.status;
+
         document.getElementById("dadosConvidado").style.display = "block";
-        document.getElementById("btnLiberar").onclick = () => {
-          fetch(GOOGLE_WEB_APP_URL, { method: "POST", body: new URLSearchParams({ acao: "liberar", idConvidado: id, responsavel: conferenteLogado }) })
-          .then(r => r.json()).then(ret => { exibirAlerta(ret.msg, "liberado"); setTimeout(() => location.reload(), 3000); });
+
+
+
+        document.getElementById("btnLiberar").onclick = async () => {
+
+          // Aqui você envia o nome do conferente junto com a liberação
+
+          fetch(GOOGLE_WEB_APP_URL, {
+
+            method: "POST",
+
+            body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado, responsavel: conferenteLogado })
+
+          }).then(r => r.json()).then(retorno => {
+
+             exibirAlerta("✓ ACESSO LIBERADO POR " + conferenteLogado, "liberado");
+
+             setTimeout(() => location.reload(), 3000);
+
+          });
+
         };
+
       });
+
     }
 
-    function exibirAlerta(t, c) { const b = document.getElementById("boxAlerta"); b.innerHTML = t; b.className = "status-alerta " + c; b.style.display = "block"; }
-    function liberarScanner() { setTimeout(() => html5QrcodeScanner.resume(), 3000); }
+
+
+    function exibirAlerta(texto, classe) {
+
+      const box = document.getElementById("boxAlerta");
+
+      box.innerHTML = texto;
+
+      box.className = "status-alerta " + classe;
+
+      box.style.display = "block";
+
+    }
+
+
+
+    function liberarScanner() {
+
+      setTimeout(() => { html5QrcodeScanner.resume(); ultimoQrLido = ""; }, 3000);
+
+    }
+
   </script>
+
 </body>
-</html>
+
+</html> 
+
