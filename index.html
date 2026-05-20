@@ -346,120 +346,97 @@
     // CONSULTA QR
 
     function processarLeitura(idConvidado) {
+    // 1. Pausa o scanner e dá feedback físico imediato
+    html5QrcodeScanner.pause(true);
+    if (navigator.vibrate) navigator.vibrate(200);
 
-      html5QrcodeScanner.pause(true);
+    // 2. Prepara interface para processamento
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("boxAlerta").style.display = "none";
+    document.getElementById("dadosConvidado").style.display = "none";
 
-      document
-        .getElementById("boxAlerta")
-        .style.display = "none";
+    // 3. Chamada ao servidor
+    fetch(GOOGLE_WEB_APP_URL, {
+        method: "POST",
+        body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
+    })
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById("loading").style.display = "none";
 
-      document
-        .getElementById("dadosConvidado")
-        .style.display = "none";
-
-      document
-        .getElementById("loading")
-        .style.display = "block";
-
-      if (navigator.vibrate) {
-
-        navigator.vibrate(100);
-      }
-
-      fetch(GOOGLE_WEB_APP_URL, {
-
-        method:"POST",
-
-        body:new URLSearchParams({
-
-          acao:"consultar",
-
-          idConvidado:idConvidado
-        })
-      })
-
-      .then(r => r.json())
-
-      .then(res => {
-
-        document
-          .getElementById("loading")
-          .style.display = "none";
-
-        // QR INVÁLIDO
-
+        // Verifica erro no QR
         if (!res.sucesso) {
-
-          audioErro.play();
-
-          exibirAlerta(
-            res.msg,
-            "bloqueado"
-          );
-
-          liberarScanner();
-
-          return;
+            audioErro.play();
+            exibirAlerta(res.msg, "bloqueado");
+            liberarScanner();
+            return;
         }
 
-        // MOSTRA DADOS
+        // Exibe dados na tela
+        document.getElementById("dNome").innerText = res.nome;
+        document.getElementById("dVeiculo").innerText = res.veiculo;
+        document.getElementById("dAluno").innerText = res.aluno;
+        document.getElementById("dStatus").innerText = res.status;
+        document.getElementById("dadosConvidado").style.display = "block";
 
-        document
-          .getElementById("dadosConvidado")
-          .style.display = "block";
+        const btn = document.getElementById("btnLiberar");
 
-        document
-          .getElementById("dNome")
-          .innerText = res.nome;
-
-        document
-          .getElementById("dVeiculo")
-          .innerText = res.veiculo;
-
-        document
-          .getElementById("dAluno")
-          .innerText = res.aluno;
-
-        document
-          .getElementById("dStatus")
-          .innerText = res.status;
-
-        const btn =
-          document.getElementById("btnLiberar");
-
-        // JÁ ENTROU
-
-        if (
-          res.status !== "NÃO ENTROU"
-        ) {
-
-          audioErro.play();
-
-          btn.style.display = "none";
-
-          exibirAlerta(
-            "⚠️ CONVIDADO JÁ ENTROU",
-            "alerta"
-          );
-
-          liberarScanner();
-
-          return;
+        // Verifica se já entrou
+        if (res.status !== "NÃO ENTROU") {
+            audioErro.play();
+            btn.style.display = "none";
+            exibirAlerta("⚠️ CONVIDADO JÁ ENTROU", "alerta");
+            liberarScanner();
+            return;
         }
 
-        // APTO
-
+        // Se está apto
         audioOk.play();
-
         btn.style.display = "block";
+        btn.disabled = false;
+        btn.innerText = "LIBERAR ACESSO";
+        exibirAlerta("✓ APTO PARA ENTRADA", "liberado");
 
-        exibirAlerta(
-          "✓ APTO PARA ENTRADA",
-          "liberado"
-        );
+        // Lógica de liberação
+        btn.onclick = async function() {
+            btn.disabled = true;
+            btn.innerText = "PROCESSANDO...";
 
-        // BOTÃO LIBERAR
+            try {
+                const response = await fetch(GOOGLE_WEB_APP_URL, {
+                    method: "POST",
+                    body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado })
+                });
+                const retorno = await response.json();
 
+                if (retorno.sucesso) {
+                    audioOk.play();
+                    exibirAlerta("✓ ACESSO LIBERADO", "liberado");
+                } else {
+                    audioErro.play();
+                    exibirAlerta(retorno.msg, "bloqueado");
+                }
+            } catch (e) {
+                audioErro.play();
+                exibirAlerta("Erro de conexão!", "bloqueado");
+            }
+
+            // Reseta a tela após 3 segundos
+            setTimeout(() => {
+                document.getElementById("dadosConvidado").style.display = "none";
+                document.getElementById("boxAlerta").style.display = "none";
+                html5QrcodeScanner.resume();
+                ultimoQrLido = "";
+            }, 3000);
+        };
+    })
+    .catch(() => {
+        document.getElementById("loading").style.display = "none";
+        audioErro.play();
+        exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
+        liberarScanner();
+    });
+}
         btn.onclick = function() {
 
           btn.disabled = true;
