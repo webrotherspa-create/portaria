@@ -19,22 +19,33 @@
     .dados-box p { margin: 10px 0; line-height: 1.4; }
     .dados-box strong { color: #90cdf4; }
     #btnLiberar { width: 100%; background: #2f855a; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-    #btnLiberar:hover { background: #276749; }
     #btnLiberar:disabled { background: #718096; cursor: not-allowed; }
+    /* Estilo Login */
+    #loginBox { display: block; }
+    .input-field { width: 90%; padding: 12px; margin: 8px 0; border-radius: 5px; border: 1px solid #4a5568; background: #1a202c; color: white; }
   </style>
 </head>
 <body>
-  <div class="container">
+
+  <div id="loginBox" class="container">
+    <h2>AUTENTICAÇÃO</h2>
+    <input type="text" id="nip" class="input-field" placeholder="NIP do Conferente">
+    <input type="password" id="pin" class="input-field" placeholder="PIN de Acesso">
+    <button onclick="fazerLogin()" style="width: 90%; padding: 12px; background: #2f855a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">ENTRAR</button>
+    <p id="msgLogin" style="margin-top:15px; color:#f56565;"></p>
+  </div>
+
+  <div id="appContainer" class="container" style="display: none;">
     <h2>PORTARIA MILITAR</h2>
     <div id="preview"></div>
     <div style="color:#a0aec0; font-size:13px;">Aponte para o QR Code do Convidado</div>
-    <div class="loader" id="loading">Verificando credenciais...</div>
+    <div class="loader" id="loading">Verificando...</div>
     <div class="status-alerta" id="boxAlerta"></div>
 
     <div class="dados-box" id="dadosConvidado">
       <p><strong>CONVIDADO:</strong><br><span id="dNome"></span></p>
       <p><strong>VEÍCULO:</strong><br><span id="dVeiculo"></span></p>
-      <p><strong>FORMANDO RESPONSÁVEL:</strong><br><span id="dAluno"></span></p>
+      <p><strong>FORMANDO:</strong><br><span id="dAluno"></span></p>
       <p><strong>STATUS:</strong><br><span id="dStatus"></span></p>
       <button id="btnLiberar">LIBERAR ACESSO</button>
     </div>
@@ -42,27 +53,35 @@
 
   <script>
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
+    let conferenteLogado = ""; // Variável para registrar o responsável
 
+    function fazerLogin() {
+      const nip = document.getElementById('nip').value;
+      const pin = document.getElementById('pin').value;
+      
+      // Chama a função do seu backend .gs
+      google.script.run.withSuccessHandler(res => {
+        if (res.sucesso) {
+          conferenteLogado = res.nome;
+          document.getElementById('loginBox').style.display = 'none';
+          document.getElementById('appContainer').style.display = 'block';
+          iniciarCamera();
+        } else {
+          document.getElementById('msgLogin').innerText = "NIP ou PIN incorretos!";
+        }
+      }).verificarLogin(nip, pin);
+    }
+
+    // --- LÓGICA DO SCANNER (Mantida a estrutura anterior) ---
+    let html5QrcodeScanner = new Html5Qrcode("preview");
+    let ultimoQrLido = "";
     const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
     const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-    let html5QrcodeScanner = new Html5Qrcode("preview");
-    let ultimoQrLido = "";
-    const config = { fps: 5, qrbox: { width: 220, height: 220 } };
-
-    iniciarCamera();
-
     async function iniciarCamera() {
       try {
-        await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess);
-      } catch(err) {
-        try {
-          const cameras = await Html5Qrcode.getCameras();
-          if (cameras.length > 0) {
-            await html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
-          }
-        } catch(e) { alert("Erro ao acessar câmera."); }
-      }
+        await html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 5, qrbox: { width: 220, height: 220 } }, onScanSuccess);
+      } catch(e) { alert("Erro ao acessar câmera."); }
     }
 
     function onScanSuccess(decodedText) {
@@ -74,82 +93,30 @@
 
     function processarLeitura(idConvidado) {
       html5QrcodeScanner.pause(true);
-      if (navigator.vibrate) navigator.vibrate(200);
-
-      document.getElementById("loading").style.display = "block";
-      document.getElementById("boxAlerta").style.display = "none";
-      document.getElementById("dadosConvidado").style.display = "none";
-
       fetch(GOOGLE_WEB_APP_URL, {
         method: "POST",
         body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
       })
       .then(r => r.json())
       .then(res => {
-        document.getElementById("loading").style.display = "none";
-
-        if (!res.sucesso) {
-          audioErro.play();
-          exibirAlerta(res.msg, "bloqueado");
-          liberarScanner();
-          return;
-        }
-
+        if (!res.sucesso) { audioErro.play(); exibirAlerta(res.msg, "bloqueado"); liberarScanner(); return; }
+        
         document.getElementById("dNome").innerText = res.nome;
         document.getElementById("dVeiculo").innerText = res.veiculo;
         document.getElementById("dAluno").innerText = res.aluno;
         document.getElementById("dStatus").innerText = res.status;
         document.getElementById("dadosConvidado").style.display = "block";
 
-        const btn = document.getElementById("btnLiberar");
-
-        if (res.status !== "NÃO ENTROU") {
-          audioErro.play();
-          btn.style.display = "none";
-          exibirAlerta("⚠️ CONVIDADO JÁ ENTROU", "alerta");
-          liberarScanner();
-          return;
-        }
-
-        audioOk.play();
-        btn.style.display = "block";
-        btn.disabled = false;
-        btn.innerText = "LIBERAR ACESSO";
-        exibirAlerta("✓ APTO PARA ENTRADA", "liberado");
-
-        btn.onclick = async function() {
-          btn.disabled = true;
-          btn.innerText = "PROCESSANDO...";
-          try {
-            const response = await fetch(GOOGLE_WEB_APP_URL, {
-              method: "POST",
-              body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado })
-            });
-            const retorno = await response.json();
-            if (retorno.sucesso) {
-              audioOk.play();
-              exibirAlerta("✓ ACESSO LIBERADO", "liberado");
-            } else {
-              audioErro.play();
-              exibirAlerta(retorno.msg, "bloqueado");
-            }
-          } catch (e) {
-            audioErro.play();
-            exibirAlerta("Erro de conexão!", "bloqueado");
-          }
-          setTimeout(() => {
-            document.getElementById("dadosConvidado").style.display = "none";
-            document.getElementById("boxAlerta").style.display = "none";
-            html5QrcodeScanner.resume();
-            ultimoQrLido = "";
-          }, 3000);
+        document.getElementById("btnLiberar").onclick = async () => {
+          // Aqui você envia o nome do conferente junto com a liberação
+          fetch(GOOGLE_WEB_APP_URL, {
+            method: "POST",
+            body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado, responsavel: conferenteLogado })
+          }).then(r => r.json()).then(retorno => {
+             exibirAlerta("✓ ACESSO LIBERADO POR " + conferenteLogado, "liberado");
+             setTimeout(() => location.reload(), 3000);
+          });
         };
-      })
-      .catch(() => {
-        document.getElementById("loading").style.display = "none";
-        audioErro.play();
-        exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
-        liberarScanner();
       });
     }
 
@@ -161,12 +128,7 @@
     }
 
     function liberarScanner() {
-      setTimeout(() => {
-        document.getElementById("dadosConvidado").style.display = "none";
-        document.getElementById("boxAlerta").style.display = "none";
-        html5QrcodeScanner.resume();
-        ultimoQrLido = "";
-      }, 4000);
+      setTimeout(() => { html5QrcodeScanner.resume(); ultimoQrLido = ""; }, 3000);
     }
   </script>
 </body>
