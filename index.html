@@ -117,42 +117,6 @@
       cursor: not-allowed;
     }
 
-    /* Estilo Login */
-    .input-field {
-      width: 90%;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 5px;
-      border: 1px solid #4a5568;
-      background: #1a202c;
-      color: white;
-      font-size: 16px;
-    }
-
-    .login-btn {
-      width: 90%;
-      padding: 12px;
-      background: #2f855a;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background 0.2s;
-    }
-
-    .login-btn:hover {
-      background: #276749;
-    }
-
-    .msg-erro {
-      margin-top: 15px;
-      color: #f56565;
-      font-size: 14px;
-    }
-
-    /* Pequenos ajustes */
     .aviso-camera {
       font-size: 13px;
       color: #a0aec0;
@@ -162,17 +126,8 @@
 </head>
 <body>
 
-  <!-- TELA DE LOGIN -->
-  <div id="loginBox" class="container">
-    <h2>AUTENTICAÇÃO</h2>
-    <input type="text" id="nip" class="input-field" placeholder="NIP do Conferente" autocomplete="off">
-    <input type="password" id="pin" class="input-field" placeholder="PIN de Acesso" autocomplete="off">
-    <button class="login-btn" onclick="fazerLogin()">ENTRAR</button>
-    <div id="msgLogin" class="msg-erro"></div>
-  </div>
-
-  <!-- TELA PRINCIPAL (SCANNER) -->
-  <div id="appContainer" class="container" style="display: none;">
+  <!-- TELA PRINCIPAL (SCANNER) - SEM LOGIN -->
+  <div id="appContainer" class="container">
     <h2>PORTARIA MILITAR</h2>
     <div id="preview"></div>
     <div class="aviso-camera">Aponte para o QR Code do Convidado</div>
@@ -189,73 +144,33 @@
   </div>
 
   <script>
-    // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU WEB APP DO GOOGLE APPS SCRIPT
+    // URL DO SEU WEB APP (substitua pela sua)
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
 
-    let conferenteLogado = "";      // Nome do conferente que autenticou
-    let html5QrcodeScanner = null;  // Instância do scanner
-    let ultimoQrLido = "";          // Evita leitura repetida do mesmo QR
-    let scannerAtivo = false;       // Controle de estado
+    // Nome / identificador do responsável pela portaria (pode ser fixo ou vir de um prompt)
+    const RESPONSAVEL_PADRAO = "Portaria";
 
-    // Sons (opcional - alguns navegadores bloqueiam autoplay, mas funciona após interação)
+    let html5QrcodeScanner = null;
+    let ultimoQrLido = "";
+    let scannerAtivo = false;
+
+    // Sons (opcional)
     const audioOk = new Audio("https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3");
     const audioErro = new Audio("https://www.soundjay.com/misc/sounds/failure-ding.mp3");
 
-    // ----- FUNÇÃO DE LOGIN (via fetch para o Google Apps Script) -----
-    async function fazerLogin() {
-      const nip = document.getElementById('nip').value.trim();
-      const pin = document.getElementById('pin').value.trim();
-      const msgDiv = document.getElementById('msgLogin');
+    // Inicializa a câmera e o scanner assim que a página carregar
+    window.addEventListener("DOMContentLoaded", () => {
+      iniciarCamera();
+    });
 
-      if (!nip || !pin) {
-        msgDiv.innerText = "Preencha NIP e PIN!";
-        return;
-      }
-
-      msgDiv.innerText = "Autenticando...";
-      msgDiv.style.color = "#cbd5e0";
-
-      try {
-        // Envia requisição para o Web App com ação "login"
-        const response = await fetch(GOOGLE_WEB_APP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            acao: "login",
-            nip: nip,
-            pin: pin
-          })
-        });
-
-        const resultado = await response.json();
-
-        if (resultado.sucesso === true) {
-          conferenteLogado = resultado.nome || "Conferente";
-          // Oculta login e mostra scanner
-          document.getElementById('loginBox').style.display = 'none';
-          document.getElementById('appContainer').style.display = 'block';
-          iniciarCamera();
-        } else {
-          msgDiv.innerText = resultado.msg || "NIP ou PIN inválidos!";
-          msgDiv.style.color = "#f56565";
-        }
-      } catch (erro) {
-        console.error("Erro na autenticação:", erro);
-        msgDiv.innerText = "Erro de rede. Verifique sua conexão ou a URL do Web App.";
-        msgDiv.style.color = "#f56565";
-      }
-    }
-
-    // ----- INICIALIZAÇÃO DA CÂMERA E SCANNER -----
     async function iniciarCamera() {
       const previewElement = document.getElementById("preview");
       if (!previewElement) return;
 
-      // Se já existir scanner, para e limpa
       if (html5QrcodeScanner) {
         try {
           await html5QrcodeScanner.stop();
-        } catch (e) { /* ignora */ }
+        } catch (e) {}
         html5QrcodeScanner.clear();
       }
 
@@ -280,7 +195,6 @@
       }
     }
 
-    // Callback quando um QR Code é lido com sucesso
     function onScanSuccess(decodedText) {
       if (!scannerAtivo) return;
       if (decodedText && decodedText !== ultimoQrLido) {
@@ -290,11 +204,9 @@
     }
 
     function onScanFailure(error) {
-      // Silencioso, apenas para debug leve
-      // console.log("Falha no scan: ", error);
+      // ignora falhas normais (ex: movimento da câmera)
     }
 
-    // Pausa o scanner temporariamente (evita múltiplas leituras)
     function pausarScanner() {
       if (html5QrcodeScanner && scannerAtivo) {
         html5QrcodeScanner.pause(true);
@@ -306,18 +218,16 @@
       if (html5QrcodeScanner && !scannerAtivo) {
         html5QrcodeScanner.resume();
         scannerAtivo = true;
-        ultimoQrLido = ""; // libera para ler novo QR
+        ultimoQrLido = "";
       }
     }
 
-    // ----- CONSULTA O QR CODE VIA WEB APP -----
     async function processarLeitura(idConvidado) {
       pausarScanner();
       const loadingDiv = document.getElementById("loading");
       const boxAlerta = document.getElementById("boxAlerta");
       const dadosDiv = document.getElementById("dadosConvidado");
 
-      // Esconde alerta anterior e dados, mostra loading
       boxAlerta.style.display = "none";
       dadosDiv.style.display = "none";
       loadingDiv.style.display = "block";
@@ -336,21 +246,20 @@
         loadingDiv.style.display = "none";
 
         if (!resultado.sucesso) {
-          // Convidado não encontrado ou QR inválido
           audioErro.play().catch(e => console.log("Áudio bloqueado"));
           exibirAlerta(resultado.msg || "QR Code inválido ou convidado não cadastrado.", "bloqueado");
           agendarRetornoScanner(3000);
           return;
         }
 
-        // Exibe dados do convidado
+        // Preenche os dados do convidado
         document.getElementById("dNome").innerText = resultado.nome || "---";
         document.getElementById("dVeiculo").innerText = resultado.veiculo || "Não informado";
         document.getElementById("dAluno").innerText = resultado.aluno || "---";
         document.getElementById("dStatus").innerText = resultado.status || "Pendente";
         dadosDiv.style.display = "block";
 
-        // Configura botão de liberação (evita múltiplos listeners)
+        // Configura o botão de liberação (remove listeners antigos)
         const btnLiberar = document.getElementById("btnLiberar");
         const novoBtn = btnLiberar.cloneNode(true);
         btnLiberar.parentNode.replaceChild(novoBtn, btnLiberar);
@@ -359,6 +268,7 @@
         novoBtn.onclick = async () => {
           novoBtn.disabled = true;
           novoBtn.innerText = "LIBERANDO...";
+
           try {
             const liberacaoResp = await fetch(GOOGLE_WEB_APP_URL, {
               method: "POST",
@@ -366,19 +276,17 @@
               body: new URLSearchParams({
                 acao: "liberar",
                 idConvidado: idConvidado,
-                responsavel: conferenteLogado
+                responsavel: RESPONSAVEL_PADRAO   // <<< aqui usa o valor fixo
               })
             });
             const liberado = await liberacaoResp.json();
 
             if (liberado.sucesso) {
               audioOk.play().catch(e => console.log("Áudio bloqueado"));
-              exibirAlerta(`✓ ACESSO LIBERADO por ${conferenteLogado}`, "liberado");
-              // Atualiza status na tela
+              exibirAlerta(`✓ ACESSO LIBERADO por ${RESPONSAVEL_PADRAO}`, "liberado");
               document.getElementById("dStatus").innerText = "LIBERADO";
               novoBtn.disabled = true;
               novoBtn.innerText = "ACESSO CONCEDIDO";
-              // Retorna ao scanner após 3 segundos
               setTimeout(() => {
                 document.getElementById("boxAlerta").style.display = "none";
                 document.getElementById("dadosConvidado").style.display = "none";
@@ -389,7 +297,6 @@
               exibirAlerta(liberado.msg || "Erro na liberação. Tente novamente.", "alerta");
               novoBtn.disabled = false;
               novoBtn.innerText = "LIBERAR ACESSO";
-              // Não retoma scanner automaticamente, usuário pode clicar em "Tentar novamente" ou o sistema aguarda
               agendarRetornoScanner(4000);
             }
           } catch (err) {
@@ -408,7 +315,6 @@
       }
     }
 
-    // Função para exibir alertas temporários
     function exibirAlerta(texto, classe) {
       const box = document.getElementById("boxAlerta");
       box.innerHTML = texto;
@@ -416,10 +322,8 @@
       box.style.display = "block";
     }
 
-    // Agenda o retorno do scanner após X ms
     function agendarRetornoScanner(tempoMs) {
       setTimeout(() => {
-        // Limpa a tela de dados e esconde alerta se ainda estiver visível
         const dadosDiv = document.getElementById("dadosConvidado");
         const alertaDiv = document.getElementById("boxAlerta");
         if (dadosDiv) dadosDiv.style.display = "none";
@@ -428,7 +332,7 @@
       }, tempoMs);
     }
 
-    // Limpeza ao sair da página (opcional)
+    // Para evitar problemas ao fechar a página
     window.addEventListener("beforeunload", async () => {
       if (html5QrcodeScanner && scannerAtivo) {
         try {
