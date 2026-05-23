@@ -57,6 +57,10 @@
       if (senha === "ciaan1955") {
         document.getElementById("loginScreen").style.display = "none";
         document.getElementById("conteudoPortaria").style.display = "block";
+        
+        // ADICIONE ESTA LINHA: Ela liga a câmera assim que a senha for aceita
+        iniciarCamera(); 
+        
       } else {
         alert("Senha incorreta!");
         document.getElementById("inputSenha").value = "";
