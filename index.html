@@ -42,18 +42,7 @@
       border: 3px solid #63b3ed;
       position: relative;
     }
-    /* fallback enquanto a câmera não inicia */
-    #preview::before {
-      content: "📷 Aguardando câmera...";
-      position: absolute;
-      color: #ccc;
-      font-size: 14px;
-      width: 100%;
-      text-align: center;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-    }
+    /* removido o pseudo-elemento que exibia "Aguardando câmera" */
     .status-alerta {
       font-weight: bold;
       padding: 12px;
@@ -126,7 +115,7 @@
     <h3 style="color:#1a365d;">Acesso à Portaria</h3>
     <input type="password" id="inputSenha" placeholder="Digite a senha" style="width:90%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
     <button type="button" onclick="verificarSenha(event)" style="background:#2f855a; color:white; border:none; padding:12px; width:100%; cursor:pointer; border-radius:4px;">Entrar</button>
-    <div class="small-note" style="color:#666;">Senha: ciaan1955</div>
+    <!-- texto da senha removido -->
   </div>
 </div>
 
@@ -202,10 +191,8 @@
       return;
     }
 
-    // Limpa conteúdo anterior e remove o pseudo-elemento de fallback visual (manualmente)
+    // Limpa conteúdo anterior
     previewElement.innerHTML = "";
-    // Remove estilos de fallback (não precisa, mas garantimos)
-    previewElement.style.position = "relative";
 
     // Cria nova instância do scanner
     html5QrcodeScanner = new Html5Qrcode("preview");
