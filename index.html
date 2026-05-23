@@ -1,222 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Scanner de Portaria Militar</title>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a202c;
+      color: white;
+      margin: 0;
+      padding: 15px;
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #2d3748;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    h2 {
+      margin-top: 0;
+      color: #63b3ed;
+      border-bottom: 1px solid #4a5568;
+      padding-bottom: 10px;
+    }
+    #preview {
+      width: 100%;
+      max-width: 320px;
+      min-height: 240px;
+      background: #000;
+      border-radius: 8px;
+      margin: 0 auto 15px auto;
+      overflow: hidden;
+      border: 3px solid #63b3ed;
+      position: relative;
+    }
+    /* fallback enquanto a câmera não inicia */
+    #preview::before {
+      content: "📷 Aguardando câmera...";
+      position: absolute;
+      color: #ccc;
+      font-size: 14px;
+      width: 100%;
+      text-align: center;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .status-alerta {
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 15px;
+      display: none;
+      font-size: 16px;
+    }
+    .liberado { background: #2f855a; border: 1px solid #48bb78; color: white; }
+    .bloqueado { background: #9b2c2c; border: 1px solid #f56565; color: white; }
+    .alerta { background: #975a16; border: 1px solid #ecc94b; color: white; }
+    .loader {
+      display: none;
+      color: #cbd5e0;
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .dados-box {
+      display: none;
+      background: #1f2937;
+      margin-top: 15px;
+      padding: 18px;
+      border-radius: 8px;
+      text-align: left;
+      border: 1px solid #4a5568;
+    }
+    .dados-box p {
+      margin: 10px 0;
+      line-height: 1.4;
+    }
+    .dados-box strong {
+      color: #90cdf4;
+    }
+    #btnLiberar {
+      width: 100%;
+      background: #2f855a;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    #btnLiberar:hover { background: #276749; }
+    #btnLiberar:disabled { background: #718096; cursor: not-allowed; }
+    .small-note {
+      font-size: 12px;
+      color: #a0aec0;
+      margin-top: 10px;
+    }
+    button#reiniciarCameraBtn {
+      background: #4a5568;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN COM SENHA -->
+<div id="loginScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#1a202c; z-index:9999; display:flex; justify-content:center; align-items:center;">
+  <div class="container" style="background:white; color:#333; text-align:center;">
+    <h3 style="color:#1a365d;">Acesso à Portaria</h3>
+    <input type="password" id="inputSenha" placeholder="Digite a senha" style="width:90%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+    <button type="button" onclick="verificarSenha(event)" style="background:#2f855a; color:white; border:none; padding:12px; width:100%; cursor:pointer; border-radius:4px;">Entrar</button>
+    <div class="small-note" style="color:#666;">Senha: ciaan1955</div>
+  </div>
+</div>
+
+<!-- CONTEÚDO PRINCIPAL (PORTARIA) -->
+<div class="container" id="conteudoPortaria" style="display:none;">
+  <h2>PORTARIA MILITAR</h2>
+  <div id="preview"></div>
+  <div style="color:#a0aec0; font-size:13px;">Aponte para o QR Code do Convidado</div>
+  <div class="loader" id="loading">Verificando credenciais...</div>
+  <div class="status-alerta" id="boxAlerta"></div>
+
+  <div class="dados-box" id="dadosConvidado">
+    <p><strong>CONVIDADO:</strong><br><span id="dNome"></span></p>
+    <p><strong>VEÍCULO:</strong><br><span id="dVeiculo"></span></p>
+    <p><strong>FORMANDO RESPONSÁVEL:</strong><br><span id="dAluno"></span></p>
+    <p><strong>STATUS:</strong><br><span id="dStatus"></span></p>
+    <button id="btnLiberar">LIBERAR ACESSO</button>
+  </div>
+  <button id="reiniciarCameraBtn" style="display: none;">🔄 Reiniciar câmera</button>
+</div>
+
 <script>
-    // LÓGICA DE SENHA
-    function verificarSenha(event) {
-      if (event) event.preventDefault();
-      const senha = document.getElementById("inputSenha").value;
-      if (senha === "ciaan1955") {
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("conteudoPortaria").style.display = "block";
-        
-        // Pequeno delay para garantir que o DOM do container esteja totalmente visível
-        setTimeout(() => {
-          iniciarCamera();
-        }, 100);
-      } else {
-        alert("Senha incorreta!");
-        document.getElementById("inputSenha").value = "";
-      }
+  // ====================== CONFIGURAÇÕES ======================
+  const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
+  const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+  const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+
+  let html5QrcodeScanner = null;
+  let ultimoQrLido = "";
+  const qrConfig = { fps: 5, qrbox: { width: 220, height: 220 } };
+
+  // ====================== FUNÇÃO DE VALIDAÇÃO DA SENHA ======================
+  function verificarSenha(event) {
+    if (event) event.preventDefault();
+    const senha = document.getElementById("inputSenha").value;
+    if (senha === "ciaan1955") {
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("conteudoPortaria").style.display = "block";
+      // Pequeno delay para garantir que o container #preview esteja visível
+      setTimeout(() => {
+        iniciarCamera();
+      }, 200);
+    } else {
+      alert("Senha incorreta!");
+      document.getElementById("inputSenha").value = "";
+    }
+  }
+
+  // ====================== INICIAR CÂMERA COM TRATAMENTO DE ERRO ======================
+  function iniciarCamera() {
+    // Verifica suporte a getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      exibirAlerta("❌ Seu navegador não suporta acesso à câmera. Use Chrome, Edge ou Firefox atualizado.", "bloqueado");
+      return;
     }
 
-    // --- CONFIGURAÇÕES GLOBAIS ---
-    const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
-    const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-    const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    // Verifica se a página está em contexto seguro (HTTPS ou localhost)
+    const isSecure = (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+    if (!isSecure) {
+      exibirAlerta("⚠️ Para usar a câmera, acesse via HTTPS ou localhost. Arquivo local (file://) não funciona.", "alerta");
+      return;
+    }
 
-    let html5QrcodeScanner = null;  // será instanciado depois que o #preview existir
-    let ultimoQrLido = "";
-    const config = { fps: 5, qrbox: { width: 220, height: 220 } };
+    // Se já existe um scanner rodando, não reinicia
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+      console.log("Scanner já está ativo.");
+      return;
+    }
 
-    // Função que realmente inicia a câmera com tratamento de erro
-    function iniciarCamera() {
-      // Verifica se o navegador suporta getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        exibirAlerta("❌ Seu navegador não suporta acesso à câmera.", "bloqueado");
-        return;
-      }
+    const previewElement = document.getElementById("preview");
+    if (!previewElement) {
+      exibirAlerta("Erro interno: elemento #preview não encontrado.", "bloqueado");
+      return;
+    }
 
-      // Verifica se a página está em contexto seguro (HTTPS ou localhost)
-      const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      if (!isSecure) {
-        exibirAlerta("⚠️ Para usar a câmera, acesse via HTTPS ou localhost. (Arquivo local não funciona)", "alerta");
-        return;
-      }
+    // Limpa conteúdo anterior e remove o pseudo-elemento de fallback visual (manualmente)
+    previewElement.innerHTML = "";
+    // Remove estilos de fallback (não precisa, mas garantimos)
+    previewElement.style.position = "relative";
 
-      // Se já existe um scanner e está rodando, não recria
-      if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-        console.log("Scanner já está ativo.");
-        return;
-      }
+    // Cria nova instância do scanner
+    html5QrcodeScanner = new Html5Qrcode("preview");
 
-      // Cria nova instância (garante que o elemento #preview existe)
-      const previewElement = document.getElementById("preview");
-      if (!previewElement) {
-        exibirAlerta("Erro interno: elemento #preview não encontrado.", "bloqueado");
-        return;
-      }
-
-      // Limpa conteúdo anterior (caso tenha ficado algum resíduo)
-      previewElement.innerHTML = "";
-      
-      html5QrcodeScanner = new Html5Qrcode("preview");
-
-      // Tenta iniciar com a câmera traseira
-      html5QrcodeScanner.start(
-        { facingMode: "environment" }, 
-        config, 
-        onScanSuccess
-      ).then(() => {
-        console.log("Câmera iniciada com sucesso!");
-        exibirAlerta("📷 Câmera ativa. Aponte para o QR Code.", "liberado");
-        // Limpa qualquer mensagem de erro anterior
+    // Tenta iniciar com a câmera traseira (environment)
+    html5QrcodeScanner.start(
+      { facingMode: "environment" },
+      qrConfig,
+      onScanSuccess
+    ).then(() => {
+      console.log("✅ Câmera iniciada com sucesso (traseira).");
+      exibirAlerta("📷 Câmera ativa. Aponte para o QR Code.", "liberado");
+      // Esconde a mensagem após 3 segundos
+      setTimeout(() => {
+        const box = document.getElementById("boxAlerta");
+        if (box && box.innerText.includes("Câmera ativa")) box.style.display = "none";
+      }, 3000);
+      // Mostra botão de reiniciar (opcional)
+      document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
+    }).catch(err => {
+      console.error("Erro ao iniciar câmera traseira:", err);
+      // Tentativa alternativa: listar todas as câmeras e usar a primeira disponível (geralmente frontal)
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length > 0) {
+          // Usa a última câmera da lista (geralmente a traseira) ou a primeira se falhar
+          const cameraId = cameras.length > 1 ? cameras[cameras.length-1].id : cameras[0].id;
+          return html5QrcodeScanner.start(cameraId, qrConfig, onScanSuccess);
+        } else {
+          throw new Error("Nenhuma câmera detectada.");
+        }
+      }).then(() => {
+        console.log("✅ Câmera iniciada via fallback (ID específico).");
+        exibirAlerta("📷 Câmera ativa (modo alternativo).", "liberado");
         setTimeout(() => {
           const box = document.getElementById("boxAlerta");
-          if (box && box.style.display !== "none" && box.innerText.includes("Câmera ativa")) {
-            box.style.display = "none";
-          }
+          if (box && box.innerText.includes("Câmera ativa")) box.style.display = "none";
         }, 3000);
-      }).catch(err => {
-        console.error("Erro ao iniciar câmera traseira:", err);
-        // Tenta listar as câmeras disponíveis como fallback
-        Html5Qrcode.getCameras().then(cameras => {
-          if (cameras && cameras.length > 0) {
-            // Pega a primeira câmera (geralmente frontal) ou a última (traseira)
-            const cameraId = cameras[cameras.length - 1].id;
-            return html5QrcodeScanner.start(cameraId, config, onScanSuccess);
-          } else {
-            throw new Error("Nenhuma câmera encontrada.");
-          }
-        }).then(() => {
-          console.log("Câmera fallback iniciada.");
-          exibirAlerta("📷 Câmera ativa (fallback).", "liberado");
-        }).catch(fallbackErr => {
-          console.error("Falha total ao acessar câmera:", fallbackErr);
-          let mensagem = "Não foi possível acessar a câmera. Verifique:";
-          mensagem += "<br>1. Permissão concedida (clique no ícone de cadeado ao lado da URL)";
-          mensagem += "<br>2. Execute em HTTPS ou localhost (não em arquivo local)";
-          mensagem += "<br>3. Nenhum outro app está usando a câmera";
-          exibirAlerta(mensagem, "bloqueado");
-        });
+        document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
+      }).catch(fallbackErr => {
+        console.error("Falha total ao acessar câmera:", fallbackErr);
+        let msg = "❌ Não foi possível acessar a câmera. Verifique: <br>1. Permissão concedida (clique no cadeado ao lado da URL).<br>2. Execute em HTTPS ou localhost.<br>3. Feche outros programas que usam a câmera.";
+        exibirAlerta(msg, "bloqueado");
+        document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
       });
-    }
+    });
+  }
 
-    function onScanSuccess(decodedText) {
-      if (decodedText && decodedText !== ultimoQrLido) {
-        ultimoQrLido = decodedText;
-        processarLeitura(decodedText);
-      }
-    }
-
-    function processarLeitura(idConvidado) {
-      if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-        html5QrcodeScanner.pause(true);
-      }
-      if (navigator.vibrate) navigator.vibrate(200);
-
-      document.getElementById("loading").style.display = "block";
-      document.getElementById("boxAlerta").style.display = "none";
-      document.getElementById("dadosConvidado").style.display = "none";
-
-      fetch(GOOGLE_WEB_APP_URL, {
-        method: "POST",
-        body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
-      })
-      .then(r => r.json())
-      .then(res => {
-        document.getElementById("loading").style.display = "none";
-        if (!res.sucesso) {
-          audioErro.play();
-          exibirAlerta(res.msg, "bloqueado");
-          liberarScanner();
-          return;
-        }
-        document.getElementById("dNome").innerText = res.nome;
-        document.getElementById("dVeiculo").innerText = res.veiculo;
-        document.getElementById("dAluno").innerText = res.aluno;
-        document.getElementById("dStatus").innerText = res.status;
-        document.getElementById("dadosConvidado").style.display = "block";
-
-        const btn = document.getElementById("btnLiberar");
-        if (res.status !== "NÃO ENTROU") {
-          audioErro.play();
-          btn.style.display = "none";
-          exibirAlerta("⚠️ CONVIDADO JÁ ENTROU", "alerta");
-          liberarScanner();
-          return;
-        }
-
-        audioOk.play();
-        btn.style.display = "block";
-        btn.disabled = false;
-        btn.innerText = "LIBERAR ACESSO";
-        exibirAlerta("✓ APTO PARA ENTRADA", "liberado");
-
-        btn.onclick = async function() {
-          btn.disabled = true;
-          btn.innerText = "PROCESSANDO...";
-          try {
-            const response = await fetch(GOOGLE_WEB_APP_URL, {
-              method: "POST",
-              body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado })
-            });
-            const retorno = await response.json();
-            if (retorno.sucesso) {
-              audioOk.play();
-              exibirAlerta("✓ ACESSO LIBERADO", "liberado");
-            } else {
-              audioErro.play();
-              exibirAlerta(retorno.msg, "bloqueado");
-            }
-          } catch (e) {
-            audioErro.play();
-            exibirAlerta("Erro de conexão!", "bloqueado");
-          }
-          setTimeout(() => {
-            document.getElementById("dadosConvidado").style.display = "none";
-            document.getElementById("boxAlerta").style.display = "none";
-            if (html5QrcodeScanner && html5QrcodeScanner.isScanning === false) {
-              html5QrcodeScanner.resume();
-            }
-            ultimoQrLido = "";
-          }, 3000);
-        };
-      })
-      .catch(() => {
-        document.getElementById("loading").style.display = "none";
-        audioErro.play();
-        exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
-        liberarScanner();
-      });
-    }
-
-    function exibirAlerta(texto, classe) {
-      const box = document.getElementById("boxAlerta");
-      box.innerHTML = texto;
-      box.className = "status-alerta " + classe;
-      box.style.display = "block";
-    }
-
-    function liberarScanner() {
-      setTimeout(() => {
-        document.getElementById("dadosConvidado").style.display = "none";
-        document.getElementById("boxAlerta").style.display = "none";
-        if (html5QrcodeScanner && html5QrcodeScanner.isScanning === false) {
-          html5QrcodeScanner.resume();
-        }
-        ultimoQrLido = "";
-      }, 4000);
-    }
-    
-    // (Opcional) Botão para reiniciar a câmera manualmente, caso dê erro
-    function reiniciarCamera() {
-      if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-        html5QrcodeScanner.stop().then(() => {
-          iniciarCamera();
-        }).catch(() => iniciarCamera());
-      } else {
+  // ====================== REINICIAR CÂMERA MANUALMENTE ======================
+  function reiniciarCamera() {
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+      html5QrcodeScanner.stop().then(() => {
+        console.log("Scanner parado, reiniciando...");
         iniciarCamera();
-      }
+      }).catch(err => {
+        console.warn("Erro ao parar scanner, tentando iniciar diretamente:", err);
+        iniciarCamera();
+      });
+    } else {
+      iniciarCamera();
     }
-    
-    // Adiciona um botão invisível de ajuda (opcional) – você pode chamar reiniciarCamera() pelo console se necessário
-    console.log("Para reiniciar a câmera manualmente, digite reiniciarCamera() no console.");
-  </script>
+  }
+
+  // ====================== SUCESSO NA LEITURA DO QR CODE ======================
+  function onScanSuccess(decodedText) {
+    if (decodedText && decodedText !== ultimoQrLido) {
+      ultimoQrLido = decodedText;
+      processarLeitura(decodedText);
+    }
+  }
+
+  // ====================== PROCESSAR QR CODE CONSULTANDO API ======================
+  function processarLeitura(idConvidado) {
+    // Pausa o scanner enquanto processa
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+      html5QrcodeScanner.pause(true);
+    }
+    if (navigator.vibrate) navigator.vibrate(200);
+
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("boxAlerta").style.display = "none";
+    document.getElementById("dadosConvidado").style.display = "none";
+
+    fetch(GOOGLE_WEB_APP_URL, {
+      method: "POST",
+      body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
+    })
+    .then(r => r.json())
+    .then(res => {
+      document.getElementById("loading").style.display = "none";
+      if (!res.sucesso) {
+        audioErro.play();
+        exibirAlerta(res.msg || "Convidado não encontrado.", "bloqueado");
+        liberarScanner();
+        return;
+      }
+
+      // Exibe dados do convidado
+      document.getElementById("dNome").innerText = res.nome || "---";
+      document.getElementById("dVeiculo").innerText = res.veiculo || "---";
+      document.getElementById("dAluno").innerText = res.aluno || "---";
+      document.getElementById("dStatus").innerText = res.status || "---";
+      document.getElementById("dadosConvidado").style.display = "block";
+
+      const btn = document.getElementById("btnLiberar");
+      if (res.status !== "NÃO ENTROU") {
+        audioErro.play();
+        btn.style.display = "none";
+        exibirAlerta("⚠️ CONVIDADO JÁ ENTROU", "alerta");
+        liberarScanner();
+        return;
+      }
+
+      audioOk.play();
+      btn.style.display = "block";
+      btn.disabled = false;
+      btn.innerText = "LIBERAR ACESSO";
+      exibirAlerta("✓ APTO PARA ENTRADA", "liberado");
+
+      // Configura o botão de liberar acesso
+      btn.onclick = async function() {
+        btn.disabled = true;
+        btn.innerText = "PROCESSANDO...";
+        try {
+          const response = await fetch(GOOGLE_WEB_APP_URL, {
+            method: "POST",
+            body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado })
+          });
+          const retorno = await response.json();
+          if (retorno.sucesso) {
+            audioOk.play();
+            exibirAlerta("✓ ACESSO LIBERADO", "liberado");
+          } else {
+            audioErro.play();
+            exibirAlerta(retorno.msg || "Erro ao liberar acesso.", "bloqueado");
+          }
+        } catch (e) {
+          audioErro.play();
+          exibirAlerta("Erro de conexão com o servidor.", "bloqueado");
+        }
+        setTimeout(() => {
+          document.getElementById("dadosConvidado").style.display = "none";
+          document.getElementById("boxAlerta").style.display = "none";
+          if (html5QrcodeScanner && !html5QrcodeScanner.isScanning) {
+            html5QrcodeScanner.resume();
+          }
+          ultimoQrLido = "";
+        }, 3000);
+      };
+    })
+    .catch(err => {
+      console.error("Erro na requisição:", err);
+      document.getElementById("loading").style.display = "none";
+      audioErro.play();
+      exibirAlerta("Erro de comunicação com o servidor. Verifique sua internet.", "bloqueado");
+      liberarScanner();
+    });
+  }
+
+  // ====================== EXIBIR MENSAGEM NA TELA ======================
+  function exibirAlerta(texto, classe) {
+    const box = document.getElementById("boxAlerta");
+    box.innerHTML = texto;
+    box.className = "status-alerta " + classe;
+    box.style.display = "block";
+  }
+
+  // ====================== RETOMAR SCANNER APÓS AÇÕES ======================
+  function liberarScanner() {
+    setTimeout(() => {
+      document.getElementById("dadosConvidado").style.display = "none";
+      document.getElementById("boxAlerta").style.display = "none";
+      if (html5QrcodeScanner && !html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner.resume();
+      }
+      ultimoQrLido = "";
+    }, 4000);
+  }
+
+  // ====================== BOTÃO MANUAL DE REINICIAR CÂMERA ======================
+  document.getElementById("reiniciarCameraBtn").addEventListener("click", function() {
+    reiniciarCamera();
+    exibirAlerta("🔄 Reiniciando câmera...", "alerta");
+    setTimeout(() => {
+      if (document.getElementById("boxAlerta").innerText === "🔄 Reiniciando câmera...") {
+        document.getElementById("boxAlerta").style.display = "none";
+      }
+    }, 2000);
+  });
+</script>
+</body>
+</html>
