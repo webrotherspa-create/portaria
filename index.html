@@ -50,24 +50,21 @@
   </div>
 
   <script>
-    // LÓGICA DE SENHA
+    // --- LÓGICA DE LOGIN ---
     function verificarSenha(event) {
       if (event) event.preventDefault();
       const senha = document.getElementById("inputSenha").value;
       if (senha === "ciaan1955") {
         document.getElementById("loginScreen").style.display = "none";
         document.getElementById("conteudoPortaria").style.display = "block";
-        
-        // ADICIONE ESTA LINHA: Ela liga a câmera assim que a senha for aceita
-        iniciarCamera(); 
-        
+        setTimeout(iniciarCamera, 500);
       } else {
         alert("Senha incorreta!");
         document.getElementById("inputSenha").value = "";
       }
     }
 
-    // --- SEU CÓDIGO ORIGINAL ABAIXO ---
+    // --- LÓGICA DA PORTARIA ---
     const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
     const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
     const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
@@ -76,18 +73,18 @@
     let ultimoQrLido = "";
     const config = { fps: 5, qrbox: { width: 220, height: 220 } };
 
-    // Só inicia a câmera se a senha for liberada (chamada após login se necessário, mas aqui deixamos pronta)
-    function iniciarCamera() {
-      html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess).catch(err => {
-        Html5Qrcode.getCameras().then(cameras => {
-          if (cameras.length > 0) html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
-          else alert("Erro ao acessar câmera.");
-        });
-      });
+    async function iniciarCamera() {
+      try {
+        await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess);
+      } catch(err) {
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras.length > 0) {
+            await html5QrcodeScanner.start(cameras[cameras.length - 1].id, config, onScanSuccess);
+          }
+        } catch(e) { alert("Erro ao acessar câmera: " + e); }
+      }
     }
-
-    // Inicia a câmera automaticamente após o login (adicionei esta chamada na função verificarSenha se quiser)
-    // Para simplificar, vou deixar a função iniciarCamera disponível.
 
     function onScanSuccess(decodedText) {
       if (decodedText && decodedText !== ultimoQrLido) {
@@ -117,6 +114,7 @@
           liberarScanner();
           return;
         }
+
         document.getElementById("dNome").innerText = res.nome;
         document.getElementById("dVeiculo").innerText = res.veiculo;
         document.getElementById("dAluno").innerText = res.aluno;
