@@ -6,9 +6,7 @@
   <title>Scanner de Portaria Militar</title>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #1a202c;
@@ -140,7 +138,7 @@
   <div class="loader" id="loading">Verificando credenciais...</div>
   <div class="status-alerta" id="boxAlerta"></div>
 
-  <!-- NOVO: Aviso especial para necessidades especiais -->
+  <!-- Aviso especial para necessidades especiais -->
   <div class="aviso-especial" id="avisoEspecial">
     ♿ ATENÇÃO: Pessoa com necessidades especiais de locomoção.<br>
     Encaminhe o veículo para o acesso prioritário.
@@ -157,8 +155,7 @@
 </div>
 
 <script>
-  // ====================== CONFIGURAÇÕES ======================
-  // ⚠️ SUBSTITUA PELA URL DO SEU WEB APP (Google Apps Script) ⚠️
+  // ====================== URL DO WEB APP (ATUALIZADA) ======================
   const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwNqxPJK4EBpV9VcrP19liqp-btJQzBF-lFMTkKU1SWAgClhS1EaCKCdQoTolfVTx9Q/exec";
   
   const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
@@ -175,9 +172,7 @@
     if (senha === "ciaan1955") {
       document.getElementById("loginScreen").style.display = "none";
       document.getElementById("conteudoPortaria").style.display = "block";
-      setTimeout(() => {
-        iniciarCamera();
-      }, 200);
+      setTimeout(() => { iniciarCamera(); }, 200);
     } else {
       alert("Senha incorreta!");
       document.getElementById("inputSenha").value = "";
@@ -239,9 +234,7 @@
 
   function reiniciarCamera() {
     if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-      html5QrcodeScanner.stop().then(() => {
-        iniciarCamera();
-      }).catch(() => iniciarCamera());
+      html5QrcodeScanner.stop().then(() => { iniciarCamera(); }).catch(() => iniciarCamera());
     } else {
       iniciarCamera();
     }
@@ -265,13 +258,17 @@
     document.getElementById("loading").style.display = "block";
     document.getElementById("boxAlerta").style.display = "none";
     document.getElementById("dadosConvidado").style.display = "none";
-    document.getElementById("avisoEspecial").style.display = "none";  // esconde aviso especial
+    document.getElementById("avisoEspecial").style.display = "none";
 
     fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ acao: "consultar", idConvidado: idConvidado })
     })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
     .then(res => {
       document.getElementById("loading").style.display = "none";
       if (!res.sucesso) {
@@ -288,7 +285,7 @@
       document.getElementById("dStatus").innerText = res.status || "---";
       document.getElementById("dadosConvidado").style.display = "block";
 
-      // NOVO: Verifica necessidade especial e exibe aviso
+      // Verifica necessidade especial
       if (res.necessidadeEspecial === "SIM") {
         document.getElementById("avisoEspecial").style.display = "block";
       } else {
@@ -316,6 +313,7 @@
         try {
           const response = await fetch(GOOGLE_WEB_APP_URL, {
             method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({ acao: "liberar", idConvidado: idConvidado })
           });
           const retorno = await response.json();
@@ -345,7 +343,7 @@
       console.error("Erro na requisição:", err);
       document.getElementById("loading").style.display = "none";
       audioErro.play();
-      exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
+      exibirAlerta("Erro de comunicação com o servidor. Verifique a URL e a implantação.", "bloqueado");
       liberarScanner();
     });
   }
