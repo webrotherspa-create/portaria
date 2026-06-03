@@ -42,7 +42,6 @@
       border: 3px solid #63b3ed;
       position: relative;
     }
-    /* removido o pseudo-elemento que exibia "Aguardando câmera" */
     .status-alerta {
       font-weight: bold;
       padding: 12px;
@@ -54,6 +53,21 @@
     .liberado { background: #2f855a; border: 1px solid #48bb78; color: white; }
     .bloqueado { background: #9b2c2c; border: 1px solid #f56565; color: white; }
     .alerta { background: #975a16; border: 1px solid #ecc94b; color: white; }
+
+    /* Destaque para necessidades especiais */
+    .aviso-especial {
+      background: #f39c12;
+      color: #000;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      text-align: center;
+      font-size: 1.1rem;
+      border: 2px solid #ffdd87;
+      display: none;
+    }
+
     .loader {
       display: none;
       color: #cbd5e0;
@@ -115,7 +129,6 @@
     <h3 style="color:#1a365d;">Acesso à Portaria</h3>
     <input type="password" id="inputSenha" placeholder="Digite a senha" style="width:90%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
     <button type="button" onclick="verificarSenha(event)" style="background:#2f855a; color:white; border:none; padding:12px; width:100%; cursor:pointer; border-radius:4px;">Entrar</button>
-    <!-- texto da senha removido -->
   </div>
 </div>
 
@@ -126,6 +139,12 @@
   <div style="color:#a0aec0; font-size:13px;">Aponte para o QR Code do Convidado</div>
   <div class="loader" id="loading">Verificando credenciais...</div>
   <div class="status-alerta" id="boxAlerta"></div>
+
+  <!-- NOVO: Aviso especial para necessidades especiais -->
+  <div class="aviso-especial" id="avisoEspecial">
+    ♿ ATENÇÃO: Pessoa com necessidades especiais de locomoção.<br>
+    Encaminhe o veículo para o acesso prioritário.
+  </div>
 
   <div class="dados-box" id="dadosConvidado">
     <p><strong>CONVIDADO:</strong><br><span id="dNome"></span></p>
@@ -139,7 +158,9 @@
 
 <script>
   // ====================== CONFIGURAÇÕES ======================
-  const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxUd_fn2DRczQRQylMCxd7XWeNF7BJxPqQyQDLNMHeKAdWZgVmSq20FjqZTjOkNy-dd/exec";
+  // ⚠️ SUBSTITUA PELA URL DO SEU WEB APP (Google Apps Script) ⚠️
+  const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/SEU_ID_AQUI/exec";
+  
   const audioOk = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
   const audioErro = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
@@ -154,7 +175,6 @@
     if (senha === "ciaan1955") {
       document.getElementById("loginScreen").style.display = "none";
       document.getElementById("conteudoPortaria").style.display = "block";
-      // Pequeno delay para garantir que o container #preview esteja visível
       setTimeout(() => {
         iniciarCamera();
       }, 200);
@@ -164,67 +184,45 @@
     }
   }
 
-  // ====================== INICIAR CÂMERA COM TRATAMENTO DE ERRO ======================
+  // ====================== INICIAR CÂMERA ======================
   function iniciarCamera() {
-    // Verifica suporte a getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      exibirAlerta("❌ Seu navegador não suporta acesso à câmera. Use Chrome, Edge ou Firefox atualizado.", "bloqueado");
+      exibirAlerta("❌ Seu navegador não suporta acesso à câmera.", "bloqueado");
       return;
     }
-
-    // Verifica se a página está em contexto seguro (HTTPS ou localhost)
     const isSecure = (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
     if (!isSecure) {
-      exibirAlerta("⚠️ Para usar a câmera, acesse via HTTPS ou localhost. Arquivo local (file://) não funciona.", "alerta");
+      exibirAlerta("⚠️ Para usar a câmera, acesse via HTTPS ou localhost.", "alerta");
       return;
     }
-
-    // Se já existe um scanner rodando, não reinicia
-    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-      console.log("Scanner já está ativo.");
-      return;
-    }
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) return;
 
     const previewElement = document.getElementById("preview");
-    if (!previewElement) {
-      exibirAlerta("Erro interno: elemento #preview não encontrado.", "bloqueado");
-      return;
-    }
-
-    // Limpa conteúdo anterior
+    if (!previewElement) return;
     previewElement.innerHTML = "";
-
-    // Cria nova instância do scanner
     html5QrcodeScanner = new Html5Qrcode("preview");
 
-    // Tenta iniciar com a câmera traseira (environment)
     html5QrcodeScanner.start(
       { facingMode: "environment" },
       qrConfig,
       onScanSuccess
     ).then(() => {
-      console.log("✅ Câmera iniciada com sucesso (traseira).");
+      console.log("✅ Câmera iniciada (traseira).");
       exibirAlerta("📷 Câmera ativa. Aponte para o QR Code.", "liberado");
-      // Esconde a mensagem após 3 segundos
       setTimeout(() => {
         const box = document.getElementById("boxAlerta");
         if (box && box.innerText.includes("Câmera ativa")) box.style.display = "none";
       }, 3000);
-      // Mostra botão de reiniciar (opcional)
       document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
     }).catch(err => {
-      console.error("Erro ao iniciar câmera traseira:", err);
-      // Tentativa alternativa: listar todas as câmeras e usar a primeira disponível (geralmente frontal)
+      console.warn("Erro na câmera traseira, tentando fallback:", err);
       Html5Qrcode.getCameras().then(cameras => {
         if (cameras && cameras.length > 0) {
-          // Usa a última câmera da lista (geralmente a traseira) ou a primeira se falhar
           const cameraId = cameras.length > 1 ? cameras[cameras.length-1].id : cameras[0].id;
           return html5QrcodeScanner.start(cameraId, qrConfig, onScanSuccess);
-        } else {
-          throw new Error("Nenhuma câmera detectada.");
-        }
+        } else throw new Error("Nenhuma câmera.");
       }).then(() => {
-        console.log("✅ Câmera iniciada via fallback (ID específico).");
+        console.log("✅ Câmera iniciada via fallback.");
         exibirAlerta("📷 Câmera ativa (modo alternativo).", "liberado");
         setTimeout(() => {
           const box = document.getElementById("boxAlerta");
@@ -232,30 +230,24 @@
         }, 3000);
         document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
       }).catch(fallbackErr => {
-        console.error("Falha total ao acessar câmera:", fallbackErr);
-        let msg = "❌ Não foi possível acessar a câmera. Verifique: <br>1. Permissão concedida (clique no cadeado ao lado da URL).<br>2. Execute em HTTPS ou localhost.<br>3. Feche outros programas que usam a câmera.";
-        exibirAlerta(msg, "bloqueado");
+        console.error("Falha total na câmera:", fallbackErr);
+        exibirAlerta("❌ Não foi possível acessar a câmera. Verifique permissões e use HTTPS.", "bloqueado");
         document.getElementById("reiniciarCameraBtn").style.display = "inline-block";
       });
     });
   }
 
-  // ====================== REINICIAR CÂMERA MANUALMENTE ======================
   function reiniciarCamera() {
     if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
       html5QrcodeScanner.stop().then(() => {
-        console.log("Scanner parado, reiniciando...");
         iniciarCamera();
-      }).catch(err => {
-        console.warn("Erro ao parar scanner, tentando iniciar diretamente:", err);
-        iniciarCamera();
-      });
+      }).catch(() => iniciarCamera());
     } else {
       iniciarCamera();
     }
   }
 
-  // ====================== SUCESSO NA LEITURA DO QR CODE ======================
+  // ====================== LEITURA DO QR CODE ======================
   function onScanSuccess(decodedText) {
     if (decodedText && decodedText !== ultimoQrLido) {
       ultimoQrLido = decodedText;
@@ -263,9 +255,8 @@
     }
   }
 
-  // ====================== PROCESSAR QR CODE CONSULTANDO API ======================
+  // ====================== CONSULTAR DADOS E EXIBIR ======================
   function processarLeitura(idConvidado) {
-    // Pausa o scanner enquanto processa
     if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
       html5QrcodeScanner.pause(true);
     }
@@ -274,6 +265,7 @@
     document.getElementById("loading").style.display = "block";
     document.getElementById("boxAlerta").style.display = "none";
     document.getElementById("dadosConvidado").style.display = "none";
+    document.getElementById("avisoEspecial").style.display = "none";  // esconde aviso especial
 
     fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
@@ -289,12 +281,19 @@
         return;
       }
 
-      // Exibe dados do convidado
+      // Exibe dados normais
       document.getElementById("dNome").innerText = res.nome || "---";
       document.getElementById("dVeiculo").innerText = res.veiculo || "---";
       document.getElementById("dAluno").innerText = res.aluno || "---";
       document.getElementById("dStatus").innerText = res.status || "---";
       document.getElementById("dadosConvidado").style.display = "block";
+
+      // NOVO: Verifica necessidade especial e exibe aviso
+      if (res.necessidadeEspecial === "SIM") {
+        document.getElementById("avisoEspecial").style.display = "block";
+      } else {
+        document.getElementById("avisoEspecial").style.display = "none";
+      }
 
       const btn = document.getElementById("btnLiberar");
       if (res.status !== "NÃO ENTROU") {
@@ -311,7 +310,6 @@
       btn.innerText = "LIBERAR ACESSO";
       exibirAlerta("✓ APTO PARA ENTRADA", "liberado");
 
-      // Configura o botão de liberar acesso
       btn.onclick = async function() {
         btn.disabled = true;
         btn.innerText = "PROCESSANDO...";
@@ -334,6 +332,7 @@
         }
         setTimeout(() => {
           document.getElementById("dadosConvidado").style.display = "none";
+          document.getElementById("avisoEspecial").style.display = "none";
           document.getElementById("boxAlerta").style.display = "none";
           if (html5QrcodeScanner && !html5QrcodeScanner.isScanning) {
             html5QrcodeScanner.resume();
@@ -346,12 +345,11 @@
       console.error("Erro na requisição:", err);
       document.getElementById("loading").style.display = "none";
       audioErro.play();
-      exibirAlerta("Erro de comunicação com o servidor. Verifique sua internet.", "bloqueado");
+      exibirAlerta("Erro de comunicação com o servidor.", "bloqueado");
       liberarScanner();
     });
   }
 
-  // ====================== EXIBIR MENSAGEM NA TELA ======================
   function exibirAlerta(texto, classe) {
     const box = document.getElementById("boxAlerta");
     box.innerHTML = texto;
@@ -359,10 +357,10 @@
     box.style.display = "block";
   }
 
-  // ====================== RETOMAR SCANNER APÓS AÇÕES ======================
   function liberarScanner() {
     setTimeout(() => {
       document.getElementById("dadosConvidado").style.display = "none";
+      document.getElementById("avisoEspecial").style.display = "none";
       document.getElementById("boxAlerta").style.display = "none";
       if (html5QrcodeScanner && !html5QrcodeScanner.isScanning) {
         html5QrcodeScanner.resume();
@@ -371,7 +369,6 @@
     }, 4000);
   }
 
-  // ====================== BOTÃO MANUAL DE REINICIAR CÂMERA ======================
   document.getElementById("reiniciarCameraBtn").addEventListener("click", function() {
     reiniciarCamera();
     exibirAlerta("🔄 Reiniciando câmera...", "alerta");
